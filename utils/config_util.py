@@ -11,10 +11,13 @@ import sys
 import os
 from pathlib import PurePath
 import psutil
+from datetime import datetime
 
 # Time format
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 PUB_TIME_FORMAT = '%Y-%m-%d'
+START_TIME = datetime.strptime('2011-11-01', PUB_TIME_FORMAT)
+END_TIME = datetime.strptime('2017-11-01', PUB_TIME_FORMAT)
 
 
 # Data directories
