@@ -36,16 +36,16 @@ COLLECTION = SOCIAL_DB['Mblog']
 
 
 def check_a_pair_of_user(user_pair):
-    logger.info("Checking out if user(%d) had retweeted user(%d)'s mblogs... " % (user_pair[1], user_pair[0]))
-    return COLLECTION.find(filter={'mblog.user.id': int(user_pair[1]),
-                                   'mblog.retweeted_status.user.id': int(user_pair[0])}).count()
+    logger.info("Checking out if user(%d) had retweeted user(%d)'s mblogs... " % (user_pair[0], user_pair[1]))
+    return COLLECTION.find(filter={'mblog.user.id': int(user_pair[0]),
+                                   'mblog.retweeted_status.user.id': int(user_pair[1])}).count()
 
 
 def check_retweet(user_pairs=None, **kwargs):
     """
     Check if each pair of users had retweeted relationship. Each pair is a tuple.
     :param user_pairs: A tuple or list of tuples.
-    :return: If user_pairs is a tuple tp, return number indicates that tp[1] had retweeted tp[0]'s tweet. Particularly,
+    :return: If user_pairs is a tuple tp, return number indicates that tp[0] had retweeted tp[1]'s tweet. Particularly,
     None represents error input. Return a list of integer when user_pairs is a list of tuples.
     """
     if not user_pairs:
@@ -110,13 +110,30 @@ if __name__ == '__main__':
     #         idx += 1
     #         if idx == 10:
     #             break
+
+    # Find retweet data of users whose mblogs are collected.
+    # user_mblogs_dir = conf.get_root_dir('DATA_ROOT') + '/user_mblogs/'
+    # for filename in os.listdir(user_mblogs_dir):
+    #     try:
+    #         uid = int(filename.split('-')[0])
+    #         find_retweet_users(uid)
+    #     except ValueError as msg:
+    #         logger.error('Not a valid file. Skip it. ' + str(msg))
+    uid_list = []
     user_mblogs_dir = conf.get_root_dir('DATA_ROOT') + '/user_mblogs/'
     for filename in os.listdir(user_mblogs_dir):
         try:
             uid = int(filename.split('-')[0])
-            find_retweet_users(uid)
+            uid_list.append(uid)
         except ValueError as msg:
             logger.error('Not a valid file. Skip it. ' + str(msg))
-    # for uid in top_ten:
-    #     find_retweet_users(uid)
-
+    uid_pairs = []
+    for uid in uid_list:
+        for uid_2 in uid_list:
+            if uid != uid_2:
+                uid_pairs.append((uid, uid_2))
+    users_retweet = check_retweet(uid_pairs)
+    with open(conf.get_root_dir('DATA_ROOT') + '/users_retweet.csv', 'w', encoding='utf-8') as fp:
+        csv_writer = csv.writer(fp)
+        for idx in range(len(uid_pairs)):
+            csv_writer.writerow([str(uid_pairs[idx][0]) + '-->' + str(uid_pairs[idx][1]), str(users_retweet[idx])])

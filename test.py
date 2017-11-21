@@ -47,10 +47,31 @@ import numpy as np
 # s = HTML_TAG.sub('', s)
 # print(s)
 
-
-
-
-
+# import utils.config_util as conf
+# d = datetime.strptime('2017-10-02', conf.PUB_TIME_FORMAT)
+# dd = datetime.strptime('2017-10-29', conf.PUB_TIME_FORMAT)
+# print(int(((conf.END_TIME-conf.START_TIME).total_seconds()/86400)))
+#
+# from collections import Iterable
+# a = [1,2]
+# ia = iter(a)
+# try:
+#     while True:
+#         print(next(ia))
+# except StopIteration as msg:
+#     print('oh no %s' % msg)
+from utils.text_processing import TextProcessor
+import threading
+threads = []
+tp = TextProcessor()
+t = threading.Thread(target=tp.tf_idf_transform, args=(['hollo asdf hollo 123 123 123','', '', '', 'hollo 123'], ))
+threads.append(t)
+t.start()
+t.join()
+# a = ['123']
+# b = ['fdas', 'sdaf']
+# a.extend(b)
+# print(a)
 
 
 

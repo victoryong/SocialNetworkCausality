@@ -16,6 +16,8 @@ import csv
 
 import utils.config_util as conf
 from utils.log import get_console_logger
+from utils.words_segmentation import tokenize
+from utils.text_processing import TextProcessor
 
 logger = get_console_logger(__name__)
 
@@ -30,10 +32,16 @@ JUST_NOW_TIME_FORM = re.compile(r'^\u521a\u521a$')
 
 
 MBLOG_REPOST = re.compile(r'^\u8f6c\u53d1\u5fae\u535a$|^\u8f49\u767c\u5fae\u535a$|//')
-MBLOG_MENTION = re.compile(r'<\w+(\s*[\w\-]*=[\'"][\w\:\.\,\?\'\/\+&%\$#\=~_\-@\u4e00-\u9fa5]*[\'"])*\s*>@\S+<\/\w+>:')
-HTML_TAG = re.compile(r'<\w+(\s*[\w\-]*=[\'"][\w\:\;\.\,\?\'\/\+&%\$#\=\[\]~_\-@\u4e00-\u9fa5]*[\'"])*\s*>|<\/\w+>')
-MBLOG_NULL = re.compile(r'null|NULL')
+MBLOG_MENTION = re.compile(r'<\w+(\s*[\w\-]*=[\'"][\w\:\.\,\?\'\/\+&%\$#\=~_\-@\u4e00-\u9fa5]*[\'"])*\s*>@\S+<\/\w+>:|@\S+\s')
+HTML_TAG = re.compile(r'<\w+(\s*[\w\-]*=[\'"][\w\:\;\.\,\?\'\/\+&%\$#\=\[\]~_\-@\u4e00-\u9fa5]*[\'"])*\s*>|<\/\w+>|<\w+\/>')
+MBLOG_NULL = re.compile(r'null|NULL|\u200bz')
 
+
+def content_filter(s, repl=''):
+    s = MBLOG_REPOST.sub(repl, s)
+    s = MBLOG_MENTION.sub(repl, s)
+    s = MBLOG_NULL.sub(repl, s)
+    return HTML_TAG.sub(repl, s)
 
 # USER_MBLOGS is a dict consists of dicts. Each element has a key of user id and value of user mblogs info.
 #
@@ -202,10 +210,9 @@ def statistic_data_from_mongodb(host='127.0.0.1', port=27017, **kwargs):
         except KeyError:
             original_text = ''
 
-        text = MBLOG_REPOST.sub('', text)
-        text = MBLOG_MENTION.sub('', text)
-        text = HTML_TAG.sub('', text)
-        text = MBLOG_NULL.sub('', text)
+        text = content_filter(text)
+        original_text = content_filter(original_text)
+
         if COUNTING:
             add_user_mblog_counts(uid)
         if SAVING:
@@ -214,7 +221,7 @@ def statistic_data_from_mongodb(host='127.0.0.1', port=27017, **kwargs):
         count += 1
         if not count % 1000:
             print(count)
-    logger.info("Total valid mblog count: %d. Total invalid count: %d. " % (VALID_COUNT, INVALID_COUNT))
+    # logger.info("Total valid mblog count: %d. Total invalid count: %d. " % (VALID_COUNT, INVALID_COUNT))
 
     # Order USER_MBLOG_COUNTS and save
     if COUNTING:
@@ -266,22 +273,90 @@ def find_default_user_mblogs(**kwargs):
 
 
 class DataGenerator:
-    def __init__(self):
-        pass
+    def __init__(self, tf_idf_threshold=.5, time_step=24*3600):
+        self.uidList = []
+        self.sequences = []
+        self.textList = []
+        self.tfIdfWords = []
+        self.tfIdfWeights = None
+        self.tfIdfThreshold = tf_idf_threshold
+        self.timeStep = time_step
+        self.seqLen = int(((conf.END_TIME-conf.START_TIME).total_seconds()/self.timeStep))
 
+    def sequence_idx(self, time_str):
+        return int(((conf.END_TIME-datetime.strptime(time_str, conf.PUB_TIME_FORMAT)).total_seconds()/self.timeStep))
 
     def construct_time_series_data(self):
         user_mblogs_dir = conf.get_root_dir('DATA_ROOT') + '/user_mblogs/'
+        user_data_dir = conf.get_root_dir('DATA_ROOT') + '/user_data/'
         for filename in os.listdir(user_mblogs_dir):
             try:
                 uid = int(filename.split('-')[0])
-                find_retweet_users(uid)
             except ValueError as msg:
-                logger.error('Not a valid file. Skip it. ' + str(msg))
+                logger.info('Invalid file name %s' % msg)
+                continue
 
+            self.uidList.append(uid)
+            absulote_mblogs_fname = user_mblogs_dir + filename
+
+            sequence = [0]*self.seqLen
+            text_list = ['']*self.seqLen
+            with open(absulote_mblogs_fname, 'r', encoding='utf-8') as fp:
+                csv_reader = csv.reader(fp)
+                next(csv_reader)
+                try:
+                    while True:
+                        line = next(csv_reader)
+                        pub_time = line[2]
+                        text = content_filter(line[3]).strip() + ' '
+                        idx = self.sequence_idx(pub_time)
+                        try:
+                            sequence[idx] = 1
+                            text_list[idx] += text
+                        except IndexError:
+                            logger.info('Index(%d) out of range. Cause: pub_time(%s) is out of range. ' % (idx, pub_time))
+                except StopIteration:
+                    logger.info('Successfully gen user %d\' data. ' % uid)
+                    self.sequences.append(sequence)
+                    text_list = tokenize(text_list)
+                    self.textList.extend(text_list)
+            # Save text a file. One user is related to one file.
+            with open(user_data_dir + conf.TEXT_FILE.format(userid=uid, n_samples=self.seqLen),
+                      'w', encoding='utf-8') as fp:
+                csv_writer = csv.writer(fp)
+                csv_writer.writerows(text_list)
+
+        text_processor = TextProcessor()
+        self.tfIdfWords, self.tfIdfWeights = text_processor.tf_idf_transform(self.textList)
+        logger.info('TF-IDF processor ended successfully! ')
+        self.save_data()
+
+    def save_data(self):
+        uid_fname = conf.get_data_filename_via_template('uid', n_users=len(self.uidList), n_samples=self.seqLen)
+        seq_fname = conf.get_data_filename_via_template('sequence', n_users=len(self.uidList), n_samples=self.seqLen)
+        tf_idf_fname = conf.get_data_filename_via_template('tfidf', n_users=len(self.uidList), n_samples=self.seqLen)
+        # Save user ids
+        with open(uid_fname, 'w', encoding='utf-8') as fp:
+            csv_writer = csv.writer(fp)
+            csv_writer.writerows(self.uidList)
+            logger.info('User id are saved in %s. ' % uid_fname)
+        # Sava sequences
+        with open(seq_fname, 'w', encoding='utf-8') as fp:
+            csv_writer = csv.writer(fp)
+            csv_writer.writerows(self.sequences)
+            logger.info('Sequences data is saved in file %s. ' % seq_fname)
+        # Save tfidf result
+        with open(tf_idf_fname, 'w', encoding='utf-8') as fp:
+            csv_writer = csv.writer(fp)
+            csv_writer.writerow(self.tfIdfWords)
+            csv_writer.writerows(self.tfIdfWeights)
+            logger.info('TF-IDF data is saved in file %s. ' % tf_idf_fname)
 
 
 if __name__ == '__main__':
     # statistic_data_from_mongodb(host='10.21.50.32')
-    # find_top_ten_mblogs()
-    find_default_user_mblogs(uid_list=[2263978304, 2846253732, 5032225033, 5213225423])
+    # find_top_ten_mblogs()uid_list=[2263978304, 2846253732, 5032225033, 5213225423]
+    # find_default_user_mblogs()
+    gen = DataGenerator()
+    gen.construct_time_series_data()
+    # gen.save_data()

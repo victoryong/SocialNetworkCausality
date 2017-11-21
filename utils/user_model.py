@@ -25,7 +25,6 @@ class UserActivity:
         :param user_id: Id of the user
         :param activities: An ActivityInfo array, contains all activities' information of the user
         """
-        # self.nick = nick
         self.userId = user_id
         self.sequence = []
         self.topics = []
