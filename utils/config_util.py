@@ -2,7 +2,7 @@
 """
 Created on Sun Oct 29 20:55:45 2017
 
-@author: Xie Yong
+@author: Victor Y, Xie
 
 Global configurations of the entire project.
 """
@@ -20,8 +20,8 @@ logger = get_console_logger(__name__)
 # Time format
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 PUB_TIME_FORMAT = '%Y-%m-%d'
-START_TIME = datetime.strptime('2011-10-31 23:59:59', TIME_FORMAT)
-END_TIME = datetime.strptime('2017-10-31 23:59:59', TIME_FORMAT)
+START_TIME = datetime.strptime('2011-09-30 23:59:59', TIME_FORMAT)
+END_TIME = datetime.strptime('2017-09-30 23:59:59', TIME_FORMAT)
 
 
 # Data directories
@@ -30,6 +30,7 @@ _PP_ROOT = PurePath(ROOT)
 PRJ_DATA_ROOT = str(_PP_ROOT.parent) + '/Data/' + str(_PP_ROOT.name)
 SINA_DATA_ROOT = str(_PP_ROOT.parent) + '/Data/sina_weibo_data'
 USER_DATA_DIR = PRJ_DATA_ROOT + '/user_data'
+LIB_DIR = str(_PP_ROOT) + '/lib'
 
 # File name
 UID_FILE = 'UserId_{n_users}_{n_samples}.csv'
@@ -38,16 +39,18 @@ TEXT_FILE = 'Text_{userid}_{n_samples}.csv'
 TF_IDF_FILE = 'TFIDF_{n_users}_{n_samples}.csv'
 
 
-def get_root_dir(root_type="ROOT"):
-    if isinstance(root_type, str):
-        root_type = root_type.upper()
-    elif not isinstance(root_type, int):
+def get_absolute_path(dir_type="ROOT"):
+    if isinstance(dir_type, str):
+        dir_type = dir_type.upper()
+    elif not isinstance(dir_type, int):
         raise ValueError('Input that allows is a root type(str) or flag(int)!')
 
-    if root_type == 'DATA_ROOT' or root_type == 1:
+    if dir_type == 'DATA_ROOT' or dir_type == 1:
         return PRJ_DATA_ROOT
-    elif root_type == 'SINA_ROOT' or root_type == 2:
+    elif dir_type == 'SINA_ROOT' or dir_type == 2:
         return SINA_DATA_ROOT
+    elif dir_type == 'LIB' or dir_type == 3:
+        return LIB_DIR
     else:
         return ROOT
 
@@ -116,7 +119,7 @@ def get_memory_state():
     return line
 
 if __name__ == "__main__":
-    print(get_root_dir())
+    print(get_absolute_path())
 
 
 

@@ -2,7 +2,7 @@
 """
 Created on 15 Nov Wed 2017
 
-@author: Xie Yong
+@author: Victor Y, Xie
 
 Check relationships such as retweets and comments of users. These relationships are explicit.
 """
@@ -70,7 +70,7 @@ def find_retweet_users(uid):
     logger.info('Finding users who had retweeted user(%d)\'s mblogs...' % uid)
     retweetded_csr = COLLECTION.find(filter={'mblog.retweeted_status.user.id': uid},
                                      projection={'_id': False, 'mblog.user.id': True})
-    retweeted_fname = conf.get_root_dir('DATA_ROOT') + '/retweeted/' + str(uid) + '.csv'
+    retweeted_fname = conf.get_absolute_path('DATA_ROOT') + '/retweeted/' + str(uid) + '.csv'
 
     retweeted_counts = {}
     for user in retweetded_csr:
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     #     except ValueError as msg:
     #         logger.error('Not a valid file. Skip it. ' + str(msg))
     uid_list = []
-    user_mblogs_dir = conf.get_root_dir('DATA_ROOT') + '/user_mblogs/'
+    user_mblogs_dir = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs/'
     for filename in os.listdir(user_mblogs_dir):
         try:
             uid = int(filename.split('-')[0])
@@ -133,7 +133,7 @@ if __name__ == '__main__':
             if uid != uid_2:
                 uid_pairs.append((uid, uid_2))
     users_retweet = check_retweet(uid_pairs)
-    with open(conf.get_root_dir('DATA_ROOT') + '/users_retweet.csv', 'w', encoding='utf-8') as fp:
+    with open(conf.get_absolute_path('DATA_ROOT') + '/users_retweet.csv', 'w', encoding='utf-8') as fp:
         csv_writer = csv.writer(fp)
         for idx in range(len(uid_pairs)):
             csv_writer.writerow([str(uid_pairs[idx][0]) + '-->' + str(uid_pairs[idx][1]), str(users_retweet[idx])])

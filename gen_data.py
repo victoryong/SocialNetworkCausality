@@ -2,7 +2,7 @@
 """
 Created on Sun Oct 29 20:36:54 2017
 
-@author: Xie Yong
+@author: Victor Y, Xie
 
 Read data files and generate input data in the form that is needed below.
 """
@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import re
 import numpy as np
 import csv
+import gc
 
 import utils.config_util as conf
 from utils.log import get_console_logger
@@ -21,7 +22,7 @@ from utils.text_processing import TextProcessor
 
 logger = get_console_logger(__name__)
 
-
+# Possible forms of time string.
 FULL_TIME_FORM = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 HALF_TIME_FORM = re.compile(r'^\d{2}-\d{2}')
 OFFSET_TIME_FORM = re.compile(r'(\d{1,2})\u5c0f\u65f6\u524d|(\d{1,2})\u5206\u949f\u524d')
@@ -30,20 +31,49 @@ OFFSET_TIME_FORM = re.compile(r'(\d{1,2})\u5c0f\u65f6\u524d|(\d{1,2})\u5206\u949
 YESTERDAY_TIME_FORM = re.compile(r'\u6628\u5929\s\d{2}:\d{2}')
 JUST_NOW_TIME_FORM = re.compile(r'^\u521a\u521a$')
 
-
+# Filters for mblog text.
 MBLOG_REPOST = re.compile(r'^\u8f6c\u53d1\u5fae\u535a$|^\u8f49\u767c\u5fae\u535a$|//')
 MBLOG_MENTION = re.compile(r'<\w+(\s*[\w\-]*=[\'"][\w\:\.\,\?\'\/\+&%\$#\=~_\-@\u4e00-\u9fa5]*[\'"])*\s*>@\S+<\/\w+>:|@\S+\s')
 HTML_TAG = re.compile(r'<\w+(\s*[\w\-]*=[\'"][\w\:\;\.\,\?\'\/\+&%\$#\=\[\]~_\-@\u4e00-\u9fa5]*[\'"])*\s*>|<\/\w+>|<\w+\/>')
-MBLOG_NULL = re.compile(r'null|NULL|\u200bz')
+LINK = re.compile(r'http:/{0,2}\S+')
+EMOTION = re.compile(r'\[\S*\]|233+')
+ENTITY = re.compile(r'&[A-Za-z]+;')
+NOT_CHN_ENG_NUM = re.compile(r'[^A-Za-z1-9\u4e00-\u9fa5]|null|NULL')
+
+
+STOPWORDS_LIST = []
+
+
+def load_stopwords():
+    global STOPWORDS_LIST
+    with open(conf.get_absolute_path('lib') + '/stopwords.dat', encoding='gbk') as fp:
+        lines = fp.readlines()
+        STOPWORDS_LIST = [x.strip() for x in lines]
+        logger.info("Stopwords have been loaded from %s. " % fp.name)
+        del lines
+        gc.collect()
 
 
 def content_filter(s, repl=''):
+    """
+    Find out meaningless parts in string s and replace them with repl.
+    :param s: Input str
+    :param repl: Replace with this str
+    :return: New str after filtering
+    """
+    s = LINK.sub(repl, s)
     s = MBLOG_REPOST.sub(repl, s)
     s = MBLOG_MENTION.sub(repl, s)
-    s = MBLOG_NULL.sub(repl, s)
-    return HTML_TAG.sub(repl, s)
+    s = EMOTION.sub(repl, s)
+    s = ENTITY.sub(repl, s)
+    s = HTML_TAG.sub(repl, s)
+    s = NOT_CHN_ENG_NUM.sub(repl, s)
+    for word in STOPWORDS_LIST:
+        s = s.replace(word, repl)
+    return s
 
 # USER_MBLOGS is a dict consists of dicts. Each element has a key of user id and value of user mblogs info.
+# It's used when getting data from mongodb.
 #
 # USER_MBLOGS = {
 #     "123456789":[{
@@ -114,7 +144,7 @@ def add_mblog_item(uid, mid, text, pub_time, crawl_time):
 
 
 def save_user_mblogs(uids):
-    user_mblog_fname = conf.get_root_dir('DATA_ROOT') + '/user_mblogs.csv'
+    user_mblog_fname = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs.csv'
     # All in one
     #
     # with open(user_mblog_fname, 'w', encoding='utf-8') as fp:
@@ -137,7 +167,7 @@ def save_user_mblogs(uids):
     #         logger.info('Mblogs of user "' + uid + '" saved. ')
 
     #     One in one
-    user_mblog_root = conf.get_root_dir('DATA_ROOT') + '/user_mblogs'
+    user_mblog_root = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs'
     for i in uids:
         uid = str(i)
         try:
@@ -167,7 +197,7 @@ def save_user_mblog_counts():
     user_ids = np.array(list(USER_MBLOGS_COUNTS))[mblog_ordered_idx]
     mblog_counts = mblog_counts[mblog_ordered_idx]
 
-    user_mblog_statistic_fname = conf.get_root_dir('DATA_ROOT') + '/user_mblog_statistic.csv'
+    user_mblog_statistic_fname = conf.get_absolute_path('DATA_ROOT') + '/user_mblog_statistic.csv'
     with open(user_mblog_statistic_fname, 'w', encoding='utf-8') as fp:
         csv_writer = csv.writer(fp)
         csv_writer.writerows(zip(user_ids, mblog_counts))
@@ -237,7 +267,7 @@ def find_top_ten_mblogs():
     SAVING = True
 
     top_ten = list()
-    user_mblog_statistic_fname = conf.get_root_dir('DATA_ROOT') + '/user_mblog_statistic.csv'
+    user_mblog_statistic_fname = conf.get_absolute_path('DATA_ROOT') + '/user_mblog_statistic.csv'
     with open(user_mblog_statistic_fname, 'r', encoding='utf-8') as fp:
         csv_reader = csv.reader(fp)
         idx = 0
@@ -262,7 +292,7 @@ def find_default_user_mblogs(**kwargs):
     if 'uid_list' in kwargs:
         uid_list = kwargs['uid_list']
     else:
-        default_users_filename = conf.get_root_dir('DATA_ROOT') + '/default_users.txt'
+        default_users_filename = conf.get_absolute_path('DATA_ROOT') + '/default_users.txt'
         uid_list = []
         with open(default_users_filename, 'r', encoding='utf-8') as fp:
             for line in fp.readlines():
@@ -287,8 +317,8 @@ class DataGenerator:
         return int(((conf.END_TIME-datetime.strptime(time_str, conf.PUB_TIME_FORMAT)).total_seconds()/self.timeStep))
 
     def construct_time_series_data(self):
-        user_mblogs_dir = conf.get_root_dir('DATA_ROOT') + '/user_mblogs/'
-        user_data_dir = conf.get_root_dir('DATA_ROOT') + '/user_data/'
+        user_mblogs_dir = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs/'
+        user_data_dir = conf.get_absolute_path('DATA_ROOT') + '/user_data/'
         for filename in os.listdir(user_mblogs_dir):
             try:
                 uid = int(filename.split('-')[0])
@@ -314,22 +344,28 @@ class DataGenerator:
                             sequence[idx] = 1
                             text_list[idx] += text
                         except IndexError:
-                            logger.info('Index(%d) out of range. Cause: pub_time(%s) is out of range. ' % (idx, pub_time))
+                            # logger.info('Index(%d) out of range. Cause: pub_time(%s) is out of range. ' % (idx, pub_time))
+                            pass
                 except StopIteration:
-                    logger.info('Successfully gen user %d\' data. ' % uid)
                     self.sequences.append(sequence)
                     text_list = tokenize(text_list)
                     self.textList.extend(text_list)
+                    logger.info('Successfully gen user %d\'s data. ' % uid)
             # Save text a file. One user is related to one file.
             with open(user_data_dir + conf.TEXT_FILE.format(userid=uid, n_samples=self.seqLen),
                       'w', encoding='utf-8') as fp:
                 csv_writer = csv.writer(fp)
-                csv_writer.writerows(text_list)
+                for row in text_list:
+                    csv_writer.writerow([row])
+            del text_list
+        gc.collect()
+        self.exec_tf_idf()
+        self.save_data()
 
+    def exec_tf_idf(self):
         text_processor = TextProcessor()
         self.tfIdfWords, self.tfIdfWeights = text_processor.tf_idf_transform(self.textList)
         logger.info('TF-IDF processor ended successfully! ')
-        self.save_data()
 
     def save_data(self):
         uid_fname = conf.get_data_filename_via_template('uid', n_users=len(self.uidList), n_samples=self.seqLen)
@@ -353,10 +389,55 @@ class DataGenerator:
             logger.info('TF-IDF data is saved in file %s. ' % tf_idf_fname)
 
 
+def test():
+    user_data_dir = conf.get_absolute_path('DATA_ROOT') + '/user_data/'
+    test_list = []
+    for filename in os.listdir(user_data_dir):
+        try:
+            uid = int(filename.split('_')[1])
+        except ValueError as msg:
+            logger.info('Invalid file name %s' % msg)
+            continue
+        absulote_mblogs_fname = user_data_dir + filename
+        with open(absulote_mblogs_fname, 'r', encoding='utf-8') as fp:
+            csv_reader = csv.reader(fp)
+            try:
+                while True:
+                    line = next(csv_reader)
+                    text = line[0].strip() + ' '
+                    test_list.append(text)
+            except StopIteration:
+                logger.info('Successfully gen user %d\'s data. ' % uid)
+    print(len(test_list))
+    tp = TextProcessor(max_features=83200)
+    words, results = tp.tf_idf_transform(test_list)
+    print(len(words))
+    print(results)
+    # print(np.sum(results))
+
+import time, threading
+
+
+def memory_state(time_long):
+    for i in range(time_long):
+        mem = conf.get_memory_state()
+        if float(mem.split(' ')[2][:-1]) > 20:
+            print(mem)
+        time.sleep(1)
+
 if __name__ == '__main__':
     # statistic_data_from_mongodb(host='10.21.50.32')
     # find_top_ten_mblogs()uid_list=[2263978304, 2846253732, 5032225033, 5213225423]
     # find_default_user_mblogs()
-    gen = DataGenerator()
-    gen.construct_time_series_data()
-    # gen.save_data()
+    # debug = 0
+    debug = 1
+    if not debug:
+        load_stopwords()
+        gen = DataGenerator()
+        gen.construct_time_series_data()
+    else:
+        t = threading.Thread(target=memory_state, args=(30, ))
+        t.start()
+        test()
+        t.join()
+        # content_filter('')

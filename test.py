@@ -60,22 +60,21 @@ import numpy as np
 #         print(next(ia))
 # except StopIteration as msg:
 #     print('oh no %s' % msg)
-from utils.text_processing import TextProcessor
-import threading
-threads = []
-tp = TextProcessor()
-t = threading.Thread(target=tp.tf_idf_transform, args=(['hollo asdf hollo 123 123 123','', '', '', 'hollo 123'], ))
-threads.append(t)
-t.start()
-t.join()
+
 # a = ['123']
 # b = ['fdas', 'sdaf']
 # a.extend(b)
 # print(a)
-
-
-
-
-
+# a = ['1231132', 'sadf']
+# with open(conf.get_absolute_path('DATA_ROOT') + '/temp.csv', 'w') as fp:
+#     w = csv.writer(fp)
+#     for row in a:
+#         w.writerow([row])
+import csv
+from gen_data import content_filter
+with open(conf.get_absolute_path('data_root') + '/user_data/Text_1194765363_2192.csv', 'r') as fp:
+    print(fp.readline())
+    r = csv.reader(fp)
+    print(content_filter(next(r)[0].strip()))
 
 

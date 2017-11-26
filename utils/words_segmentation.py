@@ -2,7 +2,7 @@
 """
 Created on Sat June 24 20:20 2017
 
-@author: Xie Yong
+@author: Victor Y, Xie
 
 """
 
@@ -11,7 +11,7 @@ import jieba
 
 from utils.log import get_console_logger
 
-logger = get_console_logger('words-segmentation')
+logger = get_console_logger(__name__)
 
 
 def tokenize(sentences, output_path=None, keep_tokens=None, filter_tokens=None):
@@ -28,7 +28,7 @@ def tokenize(sentences, output_path=None, keep_tokens=None, filter_tokens=None):
     #     jieba.load_userdict('/home/yr/myfile/dataspace/medical/KB/dict2/'+fname)
 
     seg_sen = []
-    logger.info('segment sentence...')
+    logger.info('Start to segment sentence...')
     if filter_tokens and keep_tokens:
         for line in sentences:
             seg = jieba.lcut(line.replace(r'\r?\n', ''))
@@ -63,7 +63,7 @@ def tokenize(sentences, output_path=None, keep_tokens=None, filter_tokens=None):
     #     for sen in seg_sen:
     #         f.write(' '.join(sen)+'\n')
     seg_sen = [' '.join(sen) for sen in seg_sen]
-    logger.info('Segment words successfully! ')
+    logger.info('Segment words completely. ')
     return seg_sen
 
 if __name__ == '__main__':
