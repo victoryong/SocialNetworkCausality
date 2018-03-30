@@ -23,20 +23,26 @@ PUB_TIME_FORMAT = '%Y-%m-%d'
 START_TIME = datetime.strptime('2011-09-30 23:59:59', TIME_FORMAT)
 END_TIME = datetime.strptime('2017-09-30 23:59:59', TIME_FORMAT)
 
+# Params
+N_USERS = 10
+TIME_STEP = 3600 * 24
+N_SAMPLES = 2192
+N_DIMS = 1000
 
 # Data directories
 ROOT = sys.path[1] if os.name == 'posix' else sys.path[0]
 _PP_ROOT = PurePath(ROOT)
-PRJ_DATA_ROOT = str(_PP_ROOT.parent) + '/Data/' + str(_PP_ROOT.name)
-SINA_DATA_ROOT = str(_PP_ROOT.parent) + '/Data/sina_weibo_data'
-USER_DATA_DIR = PRJ_DATA_ROOT + '/user_data'
+PRJ_NAME = 'SocialNetworkCausality'
+PRJ_ROOT = str(ROOT).split(PRJ_NAME)[0] + '/' + PRJ_NAME
 LIB_DIR = str(_PP_ROOT) + '/lib'
 
+PRJ_DATA_ROOT = str(PurePath(PRJ_ROOT).parent) + '/Data/' + PRJ_NAME
+USER_DATA_DIR = PRJ_DATA_ROOT + '/user_data'
+MODEL_DIR = PRJ_DATA_ROOT + '/text_model'
+RESULT_DIR = PRJ_DATA_ROOT + '/result'
+
 # File name
-UID_FILE = 'UserId_{n_users}_{n_samples}.csv'
-SEQ_FILE = 'Seq_{n_users}_{n_samples}.csv'
-TEXT_FILE = 'Text_{userid}_{n_samples}.csv'
-TF_IDF_FILE = 'TFIDF_{n_users}_{n_samples}.csv'
+FILENAME_TPL = '{file_type}{n_users}{user_id}{n_samples}{n_dims}.{postfix}'
 
 
 def get_absolute_path(dir_type="ROOT"):
@@ -47,64 +53,36 @@ def get_absolute_path(dir_type="ROOT"):
 
     if dir_type == 'DATA_ROOT' or dir_type == 1:
         return PRJ_DATA_ROOT
-    elif dir_type == 'SINA_ROOT' or dir_type == 2:
-        return SINA_DATA_ROOT
     elif dir_type == 'LIB' or dir_type == 3:
         return LIB_DIR
     else:
         return ROOT
 
 
-def get_sina_file_path(file_name="mblog"):
-    if isinstance(file_name, str):
-        file_name = file_name.upper()
-    elif not isinstance(file_name, int):
-        raise ValueError('Input that allows is a file name(str) or flag(int)!')
+def get_data_filename_via_template(file_type, **kwargs):
+    if not isinstance(file_type, str):
+        logger.error('A string for "file_type" is required. Got %s instead. ' % type(file_type))
+    file_type = file_type.lower()
 
-    if file_name == 'TRANS' or file_name == 1:
-        return SINA_DATA_ROOT + '/trans'
-    elif file_name == 'COMM' or file_name == 2:
-        return SINA_DATA_ROOT + '/comm'
+    def get_params(*args):
+        vals = []
+        for name in args:
+            try:
+                vals.append('_' + str(kwargs[name]))
+            except KeyError:
+                vals.append('')
+        return tuple(vals)
+
+    n_users, user_id, n_samples, n_dims = get_params('n_users', 'user_id', 'n_samples', 'n_dims')
+    postfix = kwargs.get('postfix', 'csv')
+
+    filename = FILENAME_TPL.format(file_type=file_type, n_users=n_users, user_id=user_id, n_samples=n_samples,
+                                   n_dims=n_dims, postfix=postfix).capitalize()
+
+    if file_type in ['seq', 'uid', 'text']:
+        filename = USER_DATA_DIR + '/' + filename
     else:
-        return SINA_DATA_ROOT + '/mblog'
-
-
-def get_data_filename_via_template(data_type, **kwargs):
-    if not isinstance(data_type, str):
-        logger.error('str object for "data_type" is allowed. Got %s instead. ' % type(data_type))
-    data_type = data_type.lower()
-
-    filename = ''
-    if data_type == "sequence":
-        try:
-            n_users = kwargs['n_users']
-            n_samples = kwargs['n_samples']
-            filename = USER_DATA_DIR + '/' + SEQ_FILE.format(n_users=n_users, n_samples=n_samples)
-        except KeyError as msg:
-            logger.error(msg)
-    elif data_type == "uid":
-        try:
-            n_users = kwargs['n_users']
-            n_samples = kwargs['n_samples']
-            filename = USER_DATA_DIR + '/' + UID_FILE.format(n_users=n_users, n_samples=n_samples)
-        except KeyError as msg:
-            logger.error(msg)
-    elif data_type == 'text':
-        try:
-            userid = kwargs['userid']
-            n_samples = kwargs['n_samples']
-            filename = USER_DATA_DIR + '/' + TEXT_FILE.format(userid=userid, n_samples=n_samples)
-        except KeyError as msg:
-            logger.error(msg)
-    elif data_type == 'tfidf':
-        try:
-            n_users = kwargs['n_users']
-            n_samples = kwargs['n_samples']
-            filename = USER_DATA_DIR + '/' + TF_IDF_FILE.format(n_users=n_users, n_samples=n_samples)
-        except KeyError as msg:
-            logger.error(msg)
-    else:
-        logger.error('Value of "data_type" error. Either of "sequence", "text" or "tfidf" is allowed. ')
+        filename = RESULT_DIR + '/' + filename
     return filename
 
 
@@ -119,10 +97,7 @@ def get_memory_state():
     return line
 
 if __name__ == "__main__":
-    print(get_absolute_path())
-
-
-
+    print(get_data_filename_via_template('tfidf', n_user=12, n_dims=10, n_samples=2589))
 
 
 

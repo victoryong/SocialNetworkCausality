@@ -33,20 +33,21 @@ JUST_NOW_TIME_FORM = re.compile(r'^\u521a\u521a$')
 
 # Filters for mblog text.
 MBLOG_REPOST = re.compile(r'^\u8f6c\u53d1\u5fae\u535a$|^\u8f49\u767c\u5fae\u535a$|//')
-MBLOG_MENTION = re.compile(r'<\w+(\s*[\w\-]*=[\'"][\w\:\.\,\?\'\/\+&%\$#\=~_\-@\u4e00-\u9fa5]*[\'"])*\s*>@\S+<\/\w+>:|@\S+\s')
-HTML_TAG = re.compile(r'<\w+(\s*[\w\-]*=[\'"][\w\:\;\.\,\?\'\/\+&%\$#\=\[\]~_\-@\u4e00-\u9fa5]*[\'"])*\s*>|<\/\w+>|<\w+\/>')
+MBLOG_MENTION = re.compile(
+    r'<\w+(\s*[\w\-]*=[\'"][\w\:\.\,\?\'\/\+&%\$#\=~_\-@\u4e00-\u9fa5]*[\'"])*\s*>@\S+<\/\w+>:|@\S+\s')
+HTML_TAG = re.compile(
+    r'<\w+(\s*[\w\-]*=[\'"][\w\:\;\.\,\?\'\/\+&%\$#\=\[\]~_\-@\u4e00-\u9fa5]*[\'"])*\s*>|<\/\w+>|<\w+\/>')
 LINK = re.compile(r'http:/{0,2}\S+')
 EMOTION = re.compile(r'\[\S*\]|233+')
 ENTITY = re.compile(r'&[A-Za-z]+;')
 NOT_CHN_ENG_NUM = re.compile(r'[^A-Za-z1-9\u4e00-\u9fa5]|null|NULL')
-
 
 STOPWORDS_LIST = []
 
 
 def load_stopwords():
     global STOPWORDS_LIST
-    with open(conf.get_absolute_path('lib') + '/stopwords.dat', encoding='gbk') as fp:
+    with open(conf.get_absolute_path('lib') + '/stopwords.dat') as fp:
         lines = fp.readlines()
         STOPWORDS_LIST = [x.strip() for x in lines]
         logger.info("Stopwords have been loaded from %s. " % fp.name)
@@ -71,6 +72,7 @@ def content_filter(s, repl=''):
     for word in STOPWORDS_LIST:
         s = s.replace(word, repl)
     return s
+
 
 # USER_MBLOGS is a dict consists of dicts. Each element has a key of user id and value of user mblogs info.
 # It's used when getting data from mongodb.
@@ -176,7 +178,7 @@ def save_user_mblogs(uids):
             logger.error('No mblogs records about user %s' % uid)
             continue
         user_mblog_fname = user_mblog_root + '/' + uid + '-' + str(len(mblog_list)) + '.csv'
-        with open(user_mblog_fname, 'w', encoding='utf-8') as fp:
+        with open(user_mblog_fname, 'w') as fp:
             csv_writer = csv.writer(fp)
             csv_writer.writerow(['uid', 'mid', 'pub_time', 'text'])
             for mblog in mblog_list:
@@ -198,7 +200,7 @@ def save_user_mblog_counts():
     mblog_counts = mblog_counts[mblog_ordered_idx]
 
     user_mblog_statistic_fname = conf.get_absolute_path('DATA_ROOT') + '/user_mblog_statistic.csv'
-    with open(user_mblog_statistic_fname, 'w', encoding='utf-8') as fp:
+    with open(user_mblog_statistic_fname, 'w') as fp:
         csv_writer = csv.writer(fp)
         csv_writer.writerows(zip(user_ids, mblog_counts))
         logger.info('User mblog counts saved successfully in file. (%s)' % user_mblog_statistic_fname)
@@ -246,7 +248,7 @@ def statistic_data_from_mongodb(host='127.0.0.1', port=27017, **kwargs):
         if COUNTING:
             add_user_mblog_counts(uid)
         if SAVING:
-            add_mblog_item(uid, mid, text+original_text, pub_time, crawl_time)
+            add_mblog_item(uid, mid, text + original_text, pub_time, crawl_time)
 
         count += 1
         if not count % 1000:
@@ -268,7 +270,7 @@ def find_top_ten_mblogs():
 
     top_ten = list()
     user_mblog_statistic_fname = conf.get_absolute_path('DATA_ROOT') + '/user_mblog_statistic.csv'
-    with open(user_mblog_statistic_fname, 'r', encoding='utf-8') as fp:
+    with open(user_mblog_statistic_fname, 'r') as fp:
         csv_reader = csv.reader(fp)
         idx = 0
         for item in csv_reader:
@@ -278,10 +280,10 @@ def find_top_ten_mblogs():
             idx += 1
             if idx == 10:
                 break
-            # if idx <= 10:
-            #     continue
-            # if idx == 15:
-            #     break
+                # if idx <= 10:
+                #     continue
+                # if idx == 15:
+                #     break
     statistic_data_from_mongodb(host='10.21.50.32', uid_list=top_ten)
 
 
@@ -294,7 +296,7 @@ def find_default_user_mblogs(**kwargs):
     else:
         default_users_filename = conf.get_absolute_path('DATA_ROOT') + '/default_users.txt'
         uid_list = []
-        with open(default_users_filename, 'r', encoding='utf-8') as fp:
+        with open(default_users_filename, 'r') as fp:
             for line in fp.readlines():
                 uid = int(line.split('|')[0])
                 print(uid)
@@ -303,7 +305,7 @@ def find_default_user_mblogs(**kwargs):
 
 
 class DataGenerator:
-    def __init__(self, tf_idf_threshold=.5, time_step=24*3600):
+    def __init__(self, tf_idf_threshold=.5, time_step=24 * 3600):
         self.uidList = []
         self.sequences = []
         self.textList = []
@@ -311,10 +313,11 @@ class DataGenerator:
         self.tfIdfWeights = None
         self.tfIdfThreshold = tf_idf_threshold
         self.timeStep = time_step
-        self.seqLen = int(((conf.END_TIME-conf.START_TIME).total_seconds()/self.timeStep))
+        self.seqLen = int(((conf.END_TIME - conf.START_TIME).total_seconds() / self.timeStep))
 
     def sequence_idx(self, time_str):
-        return int(((conf.END_TIME-datetime.strptime(time_str, conf.PUB_TIME_FORMAT)).total_seconds()/self.timeStep))
+        return int(
+            ((conf.END_TIME - datetime.strptime(time_str, conf.PUB_TIME_FORMAT)).total_seconds() / self.timeStep))
 
     def construct_time_series_data(self):
         user_mblogs_dir = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs/'
@@ -329,9 +332,9 @@ class DataGenerator:
             self.uidList.append(uid)
             absulote_mblogs_fname = user_mblogs_dir + filename
 
-            sequence = [0]*self.seqLen
-            text_list = ['']*self.seqLen
-            with open(absulote_mblogs_fname, 'r', encoding='utf-8') as fp:
+            sequence = [0] * self.seqLen
+            text_list = [''] * self.seqLen
+            with open(absulote_mblogs_fname, 'r') as fp:
                 csv_reader = csv.reader(fp)
                 next(csv_reader)
                 try:
@@ -353,14 +356,15 @@ class DataGenerator:
                     logger.info('Successfully gen user %d\'s data. ' % uid)
             # Save text a file. One user is related to one file.
             with open(user_data_dir + conf.TEXT_FILE.format(userid=uid, n_samples=self.seqLen),
-                      'w', encoding='utf-8') as fp:
+                      'w') as fp:
                 csv_writer = csv.writer(fp)
                 for row in text_list:
                     csv_writer.writerow([row])
             del text_list
         gc.collect()
-        self.exec_tf_idf()
-        self.save_data()
+        # print self.uidList
+        # self.exec_tf_idf()
+        # self.save_data()
 
     def exec_tf_idf(self):
         text_processor = TextProcessor()
@@ -372,48 +376,52 @@ class DataGenerator:
         seq_fname = conf.get_data_filename_via_template('sequence', n_users=len(self.uidList), n_samples=self.seqLen)
         tf_idf_fname = conf.get_data_filename_via_template('tfidf', n_users=len(self.uidList), n_samples=self.seqLen)
         # Save user ids
-        with open(uid_fname, 'w', encoding='utf-8') as fp:
+        with open(uid_fname, 'w') as fp:
             csv_writer = csv.writer(fp)
-            csv_writer.writerows(self.uidList)
+            csv_writer.writerow(self.uidList)
             logger.info('User id are saved in %s. ' % uid_fname)
         # Sava sequences
-        with open(seq_fname, 'w', encoding='utf-8') as fp:
+        with open(seq_fname, 'w') as fp:
             csv_writer = csv.writer(fp)
             csv_writer.writerows(self.sequences)
             logger.info('Sequences data is saved in file %s. ' % seq_fname)
         # Save tfidf result
-        with open(tf_idf_fname, 'w', encoding='utf-8') as fp:
-            csv_writer = csv.writer(fp)
-            csv_writer.writerow(self.tfIdfWords)
-            csv_writer.writerows(self.tfIdfWeights)
-            logger.info('TF-IDF data is saved in file %s. ' % tf_idf_fname)
+        # with open(tf_idf_fname, 'w') as fp:
+        #     csv_writer = csv.writer(fp)
+        #     csv_writer.writerow(self.tfIdfWords)
+        #     csv_writer.writerows(self.tfIdfWeights)
+        #     logger.info('TF-IDF data is saved in file %s. ' % tf_idf_fname)
 
 
 def test():
     user_data_dir = conf.get_absolute_path('DATA_ROOT') + '/user_data/'
     test_list = []
+    uid_list = []
     for filename in os.listdir(user_data_dir):
         try:
+            if filename.split('_')[0] != 'Text':
+                continue
             uid = int(filename.split('_')[1])
+            uid_list.append(uid)
         except ValueError as msg:
             logger.info('Invalid file name %s' % msg)
             continue
-        absulote_mblogs_fname = user_data_dir + filename
-        with open(absulote_mblogs_fname, 'r', encoding='utf-8') as fp:
+        absolute_mblogs_fname = user_data_dir + filename
+        with open(absolute_mblogs_fname, 'r') as fp:
             csv_reader = csv.reader(fp)
             try:
                 while True:
                     line = next(csv_reader)
-                    text = line[0].strip() + ' '
-                    test_list.append(text)
+                    # print line
+                    text = line[0].strip()
+                    test_list.append(text.split())
             except StopIteration:
-                logger.info('Successfully gen user %d\'s data. ' % uid)
+                logger.info('Successfully recover user %d\'s data. ' % uid)
     print(len(test_list))
-    tp = TextProcessor(max_features=83200)
-    words, results = tp.tf_idf_transform(test_list)
-    print(len(words))
-    print(results)
-    # print(np.sum(results))
+
+    feature_extraction(test_list, len(uid_list), len(test_list)/len(uid_list))
+
+
 
 import time, threading
 
@@ -424,6 +432,57 @@ def memory_state(time_long):
         if float(mem.split(' ')[2][:-1]) > 20:
             print(mem)
         time.sleep(1)
+
+
+def feature_extraction(corpus, n_users, n_samples, text_processor=None, untrained=True):
+    if not text_processor:
+        text_processor = TextProcessor()
+        if not untrained:
+            text_processor.load_model('tfidf')
+            corpus_tf_idf = text_processor.tfIdfModel[corpus]
+            corpus_lsi = text_processor.lsiModel[corpus_tf_idf]
+        else:
+            corpus_tf_idf = text_processor.tf_idf_transform(corpus)
+            corpus_lsi = text_processor.lsi_transform(corpus_tf_idf)
+    else:
+        if untrained:
+            corpus_tf_idf = text_processor.tf_idf_transform(corpus)
+            corpus_lsi = text_processor.lsi_transform(corpus_tf_idf)
+        else:
+            corpus_tf_idf = text_processor.tfIdfModel[corpus]
+            corpus_lsi = text_processor.lsiModel[corpus_tf_idf]
+    # print corpus_lsi
+    with open(conf.get_data_filename_via_template('lsi', n_users=n_users, n_samples=n_samples), 'wb') as fp:
+        csv_writer = csv.writer(fp)
+        for i in corpus_lsi:
+            csv_writer.writerow([x[1] for x in i])
+        logger.info('Lsi result saved. ')
+
+    return corpus_lsi
+
+
+
+# corpus_tf_idf = []
+    # with open(conf.get_data_filename_via_template('TFIDF', n_samples=2192, n_users=10)) as fp:
+    #     csv_reader = csv.reader(fp)
+    #     next(csv_reader)
+    #     idx = 0
+    #     try:
+    #         while True:
+    #             line = next(csv_reader)
+    #             # print line
+    #             w = np.array(line, float)
+    #             corpus_tf_idf.append(w)
+    #             # print corpus_tf_idf
+    #             # print len(corpus_tf_idf)
+    #             # print a
+    #             idx += 1
+    #             if idx == 2:
+    #                 print np.array(corpus_tf_idf)
+    #                 break
+    #     except StopIteration:
+    #         corpus_tf_idf = np.array(corpus_tf_idf)
+    #         logger.info('Tf-idf weights recovered. ')
 
 if __name__ == '__main__':
     # statistic_data_from_mongodb(host='10.21.50.32')
@@ -436,7 +495,7 @@ if __name__ == '__main__':
         gen = DataGenerator()
         gen.construct_time_series_data()
     else:
-        t = threading.Thread(target=memory_state, args=(30, ))
+        t = threading.Thread(target=memory_state, args=(30,))
         t.start()
         test()
         t.join()
