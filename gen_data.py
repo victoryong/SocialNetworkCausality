@@ -2,7 +2,7 @@
 """
 Created on Sun Oct 29 20:36:54 2017
 
-@author: Victor Y, Xie
+@author: Victor
 
 Read data files and generate input data in the form that is needed below.
 """
@@ -14,6 +14,8 @@ import re
 import numpy as np
 import csv
 import gc
+import time
+import threading
 
 import utils.config_util as conf
 from utils.log import get_console_logger
@@ -75,7 +77,7 @@ def content_filter(s, repl=''):
 
 
 # USER_MBLOGS is a dict consists of dicts. Each element has a key of user id and value of user mblogs info.
-# It's used when getting data from mongodb.
+# It's used when recovering data from mongodb.
 #
 # USER_MBLOGS = {
 #     "123456789":[{
@@ -146,7 +148,7 @@ def add_mblog_item(uid, mid, text, pub_time, crawl_time):
 
 
 def save_user_mblogs(uids):
-    user_mblog_fname = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs.csv'
+    user_mblog_fname = conf.get_absolute_path('data') + '/user_mblogs.csv'
     # All in one
     #
     # with open(user_mblog_fname, 'w', encoding='utf-8') as fp:
@@ -169,7 +171,7 @@ def save_user_mblogs(uids):
     #         logger.info('Mblogs of user "' + uid + '" saved. ')
 
     #     One in one
-    user_mblog_root = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs'
+    user_mblog_root = conf.get_absolute_path('data') + '/user_mblogs'
     for i in uids:
         uid = str(i)
         try:
@@ -199,7 +201,7 @@ def save_user_mblog_counts():
     user_ids = np.array(list(USER_MBLOGS_COUNTS))[mblog_ordered_idx]
     mblog_counts = mblog_counts[mblog_ordered_idx]
 
-    user_mblog_statistic_fname = conf.get_absolute_path('DATA_ROOT') + '/user_mblog_statistic.csv'
+    user_mblog_statistic_fname = conf.get_absolute_path('data') + '/user_mblog_statistic.csv'
     with open(user_mblog_statistic_fname, 'w') as fp:
         csv_writer = csv.writer(fp)
         csv_writer.writerows(zip(user_ids, mblog_counts))
@@ -269,7 +271,7 @@ def find_top_ten_mblogs():
     SAVING = True
 
     top_ten = list()
-    user_mblog_statistic_fname = conf.get_absolute_path('DATA_ROOT') + '/user_mblog_statistic.csv'
+    user_mblog_statistic_fname = conf.get_absolute_path('data') + '/user_mblog_statistic.csv'
     with open(user_mblog_statistic_fname, 'r') as fp:
         csv_reader = csv.reader(fp)
         idx = 0
@@ -294,7 +296,7 @@ def find_default_user_mblogs(**kwargs):
     if 'uid_list' in kwargs:
         uid_list = kwargs['uid_list']
     else:
-        default_users_filename = conf.get_absolute_path('DATA_ROOT') + '/default_users.txt'
+        default_users_filename = conf.get_absolute_path('data') + '/default_users.txt'
         uid_list = []
         with open(default_users_filename, 'r') as fp:
             for line in fp.readlines():
@@ -320,8 +322,8 @@ class DataGenerator:
             ((conf.END_TIME - datetime.strptime(time_str, conf.PUB_TIME_FORMAT)).total_seconds() / self.timeStep))
 
     def construct_time_series_data(self):
-        user_mblogs_dir = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs/'
-        user_data_dir = conf.get_absolute_path('DATA_ROOT') + '/user_data/'
+        user_mblogs_dir = conf.get_absolute_path('data') + '/user_mblogs/'
+        user_data_dir = conf.get_absolute_path('data') + '/user_data/'
         for filename in os.listdir(user_mblogs_dir):
             try:
                 uid = int(filename.split('-')[0])
@@ -330,11 +332,11 @@ class DataGenerator:
                 continue
 
             self.uidList.append(uid)
-            absulote_mblogs_fname = user_mblogs_dir + filename
+            absolute_mblogs_fname = user_mblogs_dir + filename
 
             sequence = [0] * self.seqLen
             text_list = [''] * self.seqLen
-            with open(absulote_mblogs_fname, 'r') as fp:
+            with open(absolute_mblogs_fname, 'r') as fp:
                 csv_reader = csv.reader(fp)
                 next(csv_reader)
                 try:
@@ -355,7 +357,7 @@ class DataGenerator:
                     self.textList.extend(text_list)
                     logger.info('Successfully gen user %d\'s data. ' % uid)
             # Save text a file. One user is related to one file.
-            with open(user_data_dir + conf.TEXT_FILE.format(userid=uid, n_samples=self.seqLen),
+            with open(user_data_dir + conf.get_data_filename_via_template('text', userid=uid, n_samples=self.seqLen),
                       'w') as fp:
                 csv_writer = csv.writer(fp)
                 for row in text_list:
@@ -373,7 +375,7 @@ class DataGenerator:
 
     def save_data(self):
         uid_fname = conf.get_data_filename_via_template('uid', n_users=len(self.uidList), n_samples=self.seqLen)
-        seq_fname = conf.get_data_filename_via_template('sequence', n_users=len(self.uidList), n_samples=self.seqLen)
+        seq_fname = conf.get_data_filename_via_template('seq', n_users=len(self.uidList), n_samples=self.seqLen)
         tf_idf_fname = conf.get_data_filename_via_template('tfidf', n_users=len(self.uidList), n_samples=self.seqLen)
         # Save user ids
         with open(uid_fname, 'w') as fp:
@@ -394,7 +396,7 @@ class DataGenerator:
 
 
 def test():
-    user_data_dir = conf.get_absolute_path('DATA_ROOT') + '/user_data/'
+    user_data_dir = conf.get_absolute_path('data') + '/user_data/'
     test_list = []
     uid_list = []
     for filename in os.listdir(user_data_dir):
@@ -420,10 +422,6 @@ def test():
     print(len(test_list))
 
     feature_extraction(test_list, len(uid_list), len(test_list)/len(uid_list))
-
-
-
-import time, threading
 
 
 def memory_state(time_long):
@@ -460,29 +458,6 @@ def feature_extraction(corpus, n_users, n_samples, text_processor=None, untraine
 
     return corpus_lsi
 
-
-
-# corpus_tf_idf = []
-    # with open(conf.get_data_filename_via_template('TFIDF', n_samples=2192, n_users=10)) as fp:
-    #     csv_reader = csv.reader(fp)
-    #     next(csv_reader)
-    #     idx = 0
-    #     try:
-    #         while True:
-    #             line = next(csv_reader)
-    #             # print line
-    #             w = np.array(line, float)
-    #             corpus_tf_idf.append(w)
-    #             # print corpus_tf_idf
-    #             # print len(corpus_tf_idf)
-    #             # print a
-    #             idx += 1
-    #             if idx == 2:
-    #                 print np.array(corpus_tf_idf)
-    #                 break
-    #     except StopIteration:
-    #         corpus_tf_idf = np.array(corpus_tf_idf)
-    #         logger.info('Tf-idf weights recovered. ')
 
 if __name__ == '__main__':
     # statistic_data_from_mongodb(host='10.21.50.32')
