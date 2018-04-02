@@ -78,7 +78,7 @@ def evaluate(n_users, n_samples, n_dims):
         csv_writer = csv.writer(fp)
         csv_writer.writerows(new_result)
 
-    comparison = np.loadtxt(conf.PRJ_DATA_ROOT + '/transfer', delimiter=',')
+    comparison = np.loadtxt(conf.DATA_DIR + '/transfer', delimiter=',')
     print(comparison)
 
     p = 0
@@ -87,85 +87,85 @@ def evaluate(n_users, n_samples, n_dims):
 
 
 def test(task_type, data):
-    if len(re.findall('different_n_samples', task_type)):
-        # sample_1 = data[-3]
-        # sample_2 = data[-1]
-        lag = 1
-        step = 137
-        te_diff_samples_list = np.zeros((N_USERS, N_USERS, 16))
-
-        # for m in range(data.shape[0]):
-        for m in range(data.shape[0]):
-            sample_1 = data[m]
-            for n in range(data.shape[0]):
-                sample_2 = data[n]
-
-                for i in range(step, data.shape[1]+1, step):
-                    sample_i = sample_1[:i]
-                    sample_j = sample_2[:i]
-
-                    sample_i_p = sample_i[lag:]
-                    sample_i_f = sample_i[:-lag]
-                    sample_j_p = sample_j[lag:]
-                    sample_j_f = sample_j[:-lag]
-                    te_i_j = cmi(sample_i_f, sample_j_p, sample_i_p)
-                    te_j_i = cmi(sample_j_f, sample_i_p, sample_j_p)
-
-                    te_diff_samples_list[m][n][int(i/step)-1] = te_i_j
-                    te_diff_samples_list[n][m][int(i/step)-1] = te_j_i
-            print('compute ended. %d' % m)
-
-        folder_path = conf.RESULT_DIR + '/diff_{n_users}_{n_samples}_{n_dims}'.format(
-            n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS)
-        if not os.path.exists(folder_path):
-            os.mkdir(folder_path)
-        for m in range(te_diff_samples_list.shape[0]):
-            with open(folder_path + '/diff_' + str(m) + '.csv', 'w') as fp:
-                csv_writer = csv.writer(fp)
-                csv_writer.writerows(te_diff_samples_list[m])
+    # if len(re.findall('different_n_samples', task_type)):
+    #     # sample_1 = data[-3]
+    #     # sample_2 = data[-1]
+    #     lag = 1
+    #     step = 137
+    #     te_diff_samples_list = np.zeros((N_USERS, N_USERS, 16))
+    #
+    #     # for m in range(data.shape[0]):
+    #     for m in range(data.shape[0]):
+    #         sample_1 = data[m]
+    #         for n in range(data.shape[0]):
+    #             sample_2 = data[n]
+    #
+    #             for i in range(step, data.shape[1]+1, step):
+    #                 sample_i = sample_1[:i]
+    #                 sample_j = sample_2[:i]
+    #
+    #                 sample_i_p = sample_i[lag:]
+    #                 sample_i_f = sample_i[:-lag]
+    #                 sample_j_p = sample_j[lag:]
+    #                 sample_j_f = sample_j[:-lag]
+    #                 te_i_j = cmi(sample_i_f, sample_j_p, sample_i_p)
+    #                 te_j_i = cmi(sample_j_f, sample_i_p, sample_j_p)
+    #
+    #                 te_diff_samples_list[m][n][int(i/step)-1] = te_i_j
+    #                 te_diff_samples_list[n][m][int(i/step)-1] = te_j_i
+    #         print('compute ended. %d' % m)
+    #
+    #     folder_path = conf.RESULT_DIR + '/diff_{n_users}_{n_samples}_{n_dims}'.format(
+    #         n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS)
+    #     if not os.path.exists(folder_path):
+    #         os.mkdir(folder_path)
+    #     for m in range(te_diff_samples_list.shape[0]):
+    #         with open(folder_path + '/diff_' + str(m) + '.csv', 'w') as fp:
+    #             csv_writer = csv.writer(fp)
+    #             csv_writer.writerows(te_diff_samples_list[m])
+    pass
 
 
 def show_te_convergence(n_users, n_samples, n_dims):
-    results = []
-    diff_path = conf.RESULT_DIR + '/diff_{n_users}_{n_samples}_{n_dims}'.format(
-        n_users=n_users, n_samples=n_samples, n_dims=n_dims)
-    pic_path = conf.RESULT_DIR + '/pltPics_{n_users}_{n_samples}_{n_dims}'.format(
-        n_users=n_users, n_samples=n_samples, n_dims=n_dims)
-    if os.path.exists(pic_path):
-        os.mkdir(pic_path)
-    for i in range(n_users):
-        results.append(np.loadtxt(diff_path + '/diff_' + str(i) + '.csv', delimiter=','))
-    results = np.array(results)
-
-    show_pairs = [(1, 3), (1, 4), (0, 1), (0, 2)]
-    show_pairs = []
-
-    # n_users = 1
-    for i in range(n_users):
-        for j in range(i, n_users):
-            show_pairs.append((i, j))
-
-    for pair in show_pairs:
-        x = range(0, 2192, 137)
-        plt.figure(figsize=(10, 6))
-        i, j = pair[0], pair[1]
-        print(results[i][j].shape)
-        print(len(x))
-        print(results[i][j])
-        print(results[j][i])
-        plt.plot(x, results[i][j], label=str(i) + '->' + str(j), marker='*')
-        plt.plot(x, results[j][i], label=str(j) + '->' + str(i), marker='+')
-        plt.legend(loc='upper right')
-        plt.title('%d and %d' % (i, j))
-        plt.savefig(pic_path + '/%dand%d.png' % (i, j))
-        plt.close()
-    # plt.xticks(range(137, 2192, 137), ('200504', '200912', '201108', '201306', '201502', '201610', ''))
-    plt.xlabel('Sample count')
-    plt.ylabel('TE')
-    # plt.title('每月XX事件数')
-    # plt.show()
-
-
+    # results = []
+    # diff_path = conf.RESULT_DIR + '/diff_{n_users}_{n_samples}_{n_dims}'.format(
+    #     n_users=n_users, n_samples=n_samples, n_dims=n_dims)
+    # pic_path = conf.RESULT_DIR + '/pltPics_{n_users}_{n_samples}_{n_dims}'.format(
+    #     n_users=n_users, n_samples=n_samples, n_dims=n_dims)
+    # if os.path.exists(pic_path):
+    #     os.mkdir(pic_path)
+    # for i in range(n_users):
+    #     results.append(np.loadtxt(diff_path + '/diff_' + str(i) + '.csv', delimiter=','))
+    # results = np.array(results)
+    #
+    # show_pairs = [(1, 3), (1, 4), (0, 1), (0, 2)]
+    # show_pairs = []
+    #
+    # # n_users = 1
+    # for i in range(n_users):
+    #     for j in range(i, n_users):
+    #         show_pairs.append((i, j))
+    #
+    # for pair in show_pairs:
+    #     x = range(0, 2192, 137)
+    #     plt.figure(figsize=(10, 6))
+    #     i, j = pair[0], pair[1]
+    #     print(results[i][j].shape)
+    #     print(len(x))
+    #     print(results[i][j])
+    #     print(results[j][i])
+    #     plt.plot(x, results[i][j], label=str(i) + '->' + str(j), marker='*')
+    #     plt.plot(x, results[j][i], label=str(j) + '->' + str(i), marker='+')
+    #     plt.legend(loc='upper right')
+    #     plt.title('%d and %d' % (i, j))
+    #     plt.savefig(pic_path + '/%dand%d.png' % (i, j))
+    #     plt.close()
+    # # plt.xticks(range(137, 2192, 137), ('200504', '200912', '201108', '201306', '201502', '201610', ''))
+    # plt.xlabel('Sample count')
+    # plt.ylabel('TE')
+    # # plt.title('每月XX事件数')
+    # # plt.show()
+    pass
 
 
 if __name__ == '__main__':
