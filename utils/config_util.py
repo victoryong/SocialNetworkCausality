@@ -39,7 +39,7 @@ MODEL_DIR = DATA_DIR + 'model/'
 RESULT_DIR = PRJ_ROOT + 'result/'
 
 # File name
-FILENAME_TPL = '{file_type}{n_users}{user_id}{n_samples}{n_dims}.{postfix}'
+FILENAME_TPL = '{file_type}{n_users}{user_id}{n_samples}{n_dims}{date}.{postfix}'
 
 
 def get_absolute_path(dir_type="root"):
@@ -66,11 +66,11 @@ def get_data_filename_via_template(file_type, **kwargs):
                 vals.append('')
         return tuple(vals)
 
-    n_users, user_id, n_samples, n_dims = get_params('n_users', 'user_id', 'n_samples', 'n_dims')
+    n_users, user_id, n_samples, n_dims, date = get_params('n_users', 'user_id', 'n_samples', 'n_dims', 'date')
     postfix = kwargs.get('postfix', 'csv')
 
     filename = FILENAME_TPL.format(file_type=file_type, n_users=n_users, user_id=user_id, n_samples=n_samples,
-                                   n_dims=n_dims, postfix=postfix).capitalize()
+                                   n_dims=n_dims, date=date, postfix=postfix).capitalize()
 
     if file_type in ['seq', 'uid', 'text', 'lsi', 'tfidf']:
         filename = DATA_DIR + filename
