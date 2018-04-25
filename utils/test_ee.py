@@ -8,7 +8,7 @@ import numpy as np
 import numpy.random as nr
 from numpy.linalg import det
 
-import lib.entropy_estimators as ee
+import utils.entropy_estimators as ee
 
 # Some test cases to see usage and correctness
 

@@ -4,18 +4,13 @@ Created on Jan 31 Wed 2017
 
 @author: Yong Xie
 """
-import os
 
 import numpy as np
 import csv
-import re
-import matplotlib.pyplot as plt
-import matplotlib.figure as mfig
-import pandas as pd
 
 from sklearn.metrics import roc_curve, auc
 
-from lib.entropy_estimators import cmi
+from utils.entropy_estimators import cmi
 import utils.config_util as conf
 from utils.config_util import get_console_logger
 
