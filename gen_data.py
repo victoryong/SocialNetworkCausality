@@ -7,20 +7,21 @@ Created on Sun Oct 29 20:36:54 2017
 Read data files and generate input data in the form that is needed below.
 """
 
-import os
-import pymongo
-from datetime import datetime, timedelta
-import re
-import numpy as np
 import csv
 import gc
-import time
+import os
+import re
 import threading
+import time
+from datetime import datetime, timedelta
+
+import numpy as np
+import pymongo
 
 import utils.config_util as conf
+from text_processing import TextProcessor
 from utils.log import get_console_logger
-from utils.words_segmentation import tokenize
-from utils.text_processing import TextProcessor
+from words_segmentation import tokenize
 
 logger = get_console_logger(__name__)
 
