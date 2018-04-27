@@ -21,7 +21,7 @@ def tokenize(sentences, output_path=None, keep_tokens=None, filter_tokens=None):
     :param output_path: Path that the result locate.
     :param keep_tokens:  List of tokens that will be kept.
     :param filter_tokens: List of tokens that will be filtered.
-    :return List of Text after segmentation.
+    :return List of Text after segmentation, segments in a text is connected with a blank space.
     """
     # Load user-defined dictionary
     # for fname in os.listdir('/home/yr/myfile/dataspace/medical/KB/dict2'):
@@ -79,7 +79,7 @@ if __name__ == '__main__':
                      '你会挽着我的衣袖',
                      '我会把手揣进裤兜'])
     print(text)
-    print(''.join(text))
+    # print(''.join(text))
     # for sen in seg_sen:
     #     print(' '.join(sen)+'\n')
     logger.info('End testing.')

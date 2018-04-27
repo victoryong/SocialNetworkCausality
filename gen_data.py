@@ -2,7 +2,7 @@
 """
 Created on Sun Oct 29 20:36:54 2017
 
-@author: Victor
+@author: Xie Yong
 
 Read data files and generate input data in the form that is needed below.
 """
@@ -11,15 +11,12 @@ import csv
 import gc
 import os
 import re
-import threading
-import time
 from datetime import datetime, timedelta
 
 import numpy as np
 import pymongo
 
 import utils.config_util as conf
-from text_processing import TextProcessor
 from utils.log import get_console_logger
 from words_segmentation import tokenize
 
@@ -308,13 +305,10 @@ def find_default_user_mblogs(**kwargs):
 
 
 class DataGenerator:
-    def __init__(self, tf_idf_threshold=.5, time_step=24 * 3600):
+    def __init__(self, time_step=24 * 3600):
         self.uidList = []
         self.sequences = []
         self.textList = []
-        self.tfIdfWords = []
-        self.tfIdfWeights = None
-        self.tfIdfThreshold = tf_idf_threshold
         self.timeStep = time_step
         self.seqLen = int(((conf.END_TIME - conf.START_TIME).total_seconds() / self.timeStep))
 
@@ -369,11 +363,6 @@ class DataGenerator:
         # self.exec_tf_idf()
         # self.save_data()
 
-    def exec_tf_idf(self):
-        text_processor = TextProcessor()
-        self.tfIdfWords, self.tfIdfWeights = text_processor.tf_idf_transform(self.textList)
-        logger.info('TF-IDF processor ended successfully! ')
-
     def save_data(self):
         uid_fname = conf.get_data_filename_via_template('uid', n_users=len(self.uidList), n_samples=self.seqLen)
         seq_fname = conf.get_data_filename_via_template('seq', n_users=len(self.uidList), n_samples=self.seqLen)
@@ -395,84 +384,46 @@ class DataGenerator:
         #     csv_writer.writerows(self.tfIdfWeights)
         #     logger.info('TF-IDF data is saved in file %s. ' % tf_idf_fname)
 
+    def recover_text_list(self, debug=False):
+        user_data_dir = conf.get_absolute_path('data')
+        text_list = []
+        uid_list = []
 
-def test():
-    user_data_dir = conf.get_absolute_path('data') + '/user_data/'
-    test_list = []
-    uid_list = []
-    for filename in os.listdir(user_data_dir):
-        try:
-            if filename.split('_')[0] != 'Text':
-                continue
-            uid = int(filename.split('_')[1])
-            uid_list.append(uid)
-        except ValueError as msg:
-            logger.info('Invalid file name %s' % msg)
-            continue
-        absolute_mblogs_fname = user_data_dir + filename
-        with open(absolute_mblogs_fname, 'r') as fp:
-            csv_reader = csv.reader(fp)
+        debug_flag = 0
+        for filename in os.listdir(user_data_dir):
+            if debug and debug_flag > 0:
+                break
             try:
-                while True:
-                    line = next(csv_reader)
-                    # print line
-                    text = line[0].strip()
-                    test_list.append(text.split())
-            except StopIteration:
-                logger.info('Successfully recover user %d\'s data. ' % uid)
-    print(len(test_list))
-
-    feature_extraction(test_list, len(uid_list), len(test_list)/len(uid_list))
-
-
-def memory_state(time_long):
-    for i in range(time_long):
-        mem = conf.get_memory_state()
-        if float(mem.split(' ')[2][:-1]) > 20:
-            print(mem)
-        time.sleep(1)
-
-
-def feature_extraction(corpus, n_users, n_samples, text_processor=None, untrained=True):
-    if not text_processor:
-        text_processor = TextProcessor()
-        if not untrained:
-            text_processor.load_model('tfidf')
-            corpus_tf_idf = text_processor.tfIdfModel[corpus]
-            corpus_lsi = text_processor.lsiModel[corpus_tf_idf]
-        else:
-            corpus_tf_idf = text_processor.tf_idf_transform(corpus)
-            corpus_lsi = text_processor.lsi_transform(corpus_tf_idf)
-    else:
-        if untrained:
-            corpus_tf_idf = text_processor.tf_idf_transform(corpus)
-            corpus_lsi = text_processor.lsi_transform(corpus_tf_idf)
-        else:
-            corpus_tf_idf = text_processor.tfIdfModel[corpus]
-            corpus_lsi = text_processor.lsiModel[corpus_tf_idf]
-    # print corpus_lsi
-    with open(conf.get_data_filename_via_template('lsi', n_users=n_users, n_samples=n_samples), 'wb') as fp:
-        csv_writer = csv.writer(fp)
-        for i in corpus_lsi:
-            csv_writer.writerow([x[1] for x in i])
-        logger.info('Lsi result saved. ')
-
-    return corpus_lsi
+                if filename.split('_')[0] != 'Text':
+                    continue
+                uid = int(filename.split('_')[1])
+                uid_list.append(uid)
+            except ValueError as msg:
+                logger.info('Invalid file name %s' % msg)
+                continue
+            absolute_mblogs_fname = user_data_dir + filename
+            with open(absolute_mblogs_fname, 'r') as fp:
+                csv_reader = csv.reader(fp)
+                try:
+                    while True:
+                        line = next(csv_reader)
+                        # print line
+                        text = line[0].strip().split(' ')
+                        text_list.append(text)
+                except StopIteration:
+                    logger.info('Successfully recover user %d\'s data. ' % uid)
+            debug_flag += 1
+        print(len(text_list))
+        if debug:
+            print(text_list[:100])
+        self.textList = text_list
+        self.uidList = uid_list
+        return text_list, uid_list
 
 
 if __name__ == '__main__':
     # statistic_data_from_mongodb(host='10.21.50.32')
     # find_top_ten_mblogs()uid_list=[2263978304, 2846253732, 5032225033, 5213225423]
     # find_default_user_mblogs()
-    # debug = 0
-    debug = 1
-    if not debug:
-        load_stopwords()
-        gen = DataGenerator()
-        gen.construct_time_series_data()
-    else:
-        t = threading.Thread(target=memory_state, args=(30,))
-        t.start()
-        test()
-        t.join()
-        # content_filter('')
+    DataGenerator().recover_text_list(True)
+

@@ -4,12 +4,8 @@ import numpy as np
 import csv
 import os
 
-a = [[1.,22,4,8,9],[3,4,0,1,8]]
-b = [[0,2],[3,0]]
-
-a = np.array(a).astype(int)
-b = np.array(b)
-
-
-# print(np.sum(a[:, 0]))
-print(a.reshape(10))
+print(conf.get_data_filename_via_template('tfidf', n_users=conf.N_USERS,  postfix='mm',
+                                          n_samples=conf.N_SAMPLES))
+a =[1,2,3]
+b = [5,6,7]
+print(list(map(lambda m,n: m+n, a,b)))
