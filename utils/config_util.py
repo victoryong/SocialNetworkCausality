@@ -12,6 +12,7 @@ import os
 import psutil
 from datetime import datetime
 import time
+import gc
 
 from utils.log import get_console_logger
 
@@ -128,9 +129,14 @@ def mk_dir(path, path_type='file'):
     if path_type == 'dir' and not os.path.exists(path):
         os.mkdir(path)
     elif path_type == 'file':
-        sup_path = path.split('/')[:-1]
+        sup_path = '/'.join(path.split('/')[:-1])
         if not os.path.exists(sup_path):
             os.mkdir(sup_path)
+
+
+def delete_var(v):
+    del v
+    gc.collect()
 
 
 if __name__ == "__main__":

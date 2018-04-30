@@ -127,6 +127,7 @@ class TextProcessor:
         lsi_corpus = self.lsiModel[corpus_tf_idf]
         lsi_corpus_path = conf.get_data_filename_via_template('lsi', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES,
                                                               n_dims=n_topics, postfix='mm')
+        conf.mk_dir(lsi_corpus_path)
         corpora.MmCorpus.serialize(lsi_corpus_path, lsi_corpus)
         logger.info(
             'Lsi corpus with a shape of %s has been saved in %s.' % (np.array(lsi_corpus).shape, lsi_corpus_path))
@@ -171,6 +172,7 @@ class TextProcessor:
         lda_corpus = self.ldaModel[corpus_tf_idf]
         lda_corpus_path = conf.get_data_filename_via_template('lda', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES,
                                                               n_dims=n_topics, postfix='mm')
+        conf.mk_dir(lda_corpus_path)
         corpora.MmCorpus.serialize(lda_corpus_path, lda_corpus)
         logger.info(
             'Lda corpus with a shape of %s has been saved in %s.' % (np.array(lda_corpus).shape, lda_corpus_path))
@@ -211,7 +213,7 @@ class TextProcessor:
 
         return w2v_corpus
 
-    def load_corpus(self, model_type, n_dims=conf.N_DIMS, dense=True):
+    def load_corpus(self, model_type, n_dims=conf.N_DIMS, dense=False):
         corpus = None
         if model_type == 'tfidf':
             corpus = corpora.MmCorpus(
