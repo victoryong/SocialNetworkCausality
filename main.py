@@ -19,14 +19,14 @@ logger = conf.get_console_logger(__name__)
 # 'train' for training model, 'lmodel' for loading model, 'lcorpus' for loading corpus, else for nothing.
 target = ['train', 'lcorpus', 'lmodel']
 args = {
-    'tfidf': 'lcorpus',
+    'tfidf': '', #''lcorpus',
     'lsi': '',# 'train',
-    'lda': 'train',
-    'w2v': ''#'train'
+    'lda': '', #''train',
+    'w2v': 'train'#'train'
 }
 
 
-n_dims_list = [800, 1000]  # Define a list of n_dims of vectors that the texts are transformed to.
+n_dims_list = [500, 800, 1000]  # Define a list of n_dims of vectors that the texts are transformed to.
 DG = DataGenerator()
 TP = TextProcessor()
 
@@ -71,7 +71,10 @@ elif args['lsi'] == target[2]:
 if args['lda'] == target[0]:
     logger.info('Training lda model...')
     for i in n_dims_list:
-        TP.lda_transform(TP.tfIdfCorpus, n_topics=i)
+        try:
+            TP.lda_transform(TP.tfIdfCorpus, n_topics=i)
+        except MemoryError as e:
+            logger.error('%s. %s' % (str(e), conf.get_memory_state()))
         del TP.ldaModel
         gc.collect()
 elif args['lda'] == target[1]:

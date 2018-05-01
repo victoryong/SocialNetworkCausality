@@ -9,6 +9,8 @@ A text processor whose aims at vectorizing text, includes tf-idf, lsi, lda, word
 
 from io import StringIO
 import os
+import gc
+import csv
 
 import numpy as np
 from gensim.models.lsimodel import LsiModel
@@ -168,6 +170,8 @@ class TextProcessor:
         conf.mk_dir(lda_path)
         self.ldaModel.save(lda_path)
         logger.info('lda model has been saved in %s' % lda_path)
+        del self.dictionary
+        gc.collect()
 
         lda_corpus = self.ldaModel[corpus_tf_idf]
         lda_corpus_path = conf.get_data_filename_via_template('lda', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES,
@@ -176,6 +180,8 @@ class TextProcessor:
         corpora.MmCorpus.serialize(lda_corpus_path, lda_corpus)
         logger.info(
             'Lda corpus with a shape of %s has been saved in %s.' % (np.array(lda_corpus).shape, lda_corpus_path))
+        del self.ldaModel
+        gc.collect()
 
         return lda_corpus
 
@@ -210,6 +216,19 @@ class TextProcessor:
                     vec = list(map(lambda m, n: m + n, vec, self.w2vModel[word]))
                     # vec += self.w2vModel[word]
             w2v_corpus.append(vec)
+
+        w2v_corpus_path = conf.get_data_filename_via_template(
+            'w2v', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES, n_dims=n_dims)
+        conf.mk_dir(w2v_corpus_path)
+        with open(w2v_corpus_path, 'wb') as fp:
+            csv_writer = csv.writer(fp)
+            for line in w2v_corpus:
+                csv_writer.writerrow(line)
+            logger.info('W2v corpus has been saved in %s. ' % w2v_corpus_path)
+
+        del self.w2vModel
+        del w2v_corpus
+        gc.collect()
 
         return w2v_corpus
 
