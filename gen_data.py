@@ -317,8 +317,8 @@ class DataGenerator:
             ((conf.END_TIME - datetime.strptime(time_str, conf.PUB_TIME_FORMAT)).total_seconds() / self.timeStep))
 
     def construct_time_series_data(self):
-        user_mblogs_dir = conf.get_absolute_path('data') + '/user_mblogs/'
-        user_data_dir = conf.get_absolute_path('data') + '/user_data/'
+        user_mblogs_dir = conf.get_absolute_path('data') + 'user_mblogs/'
+        user_data_dir = conf.get_absolute_path('data')
         for filename in os.listdir(user_mblogs_dir):
             try:
                 uid = int(filename.split('-')[0])
@@ -351,7 +351,8 @@ class DataGenerator:
                     text_list = tokenize(text_list)
                     self.textList.extend(text_list)
                     logger.info('Successfully gen user %d\'s data. ' % uid)
-            # Save text a file. One user is related to one file.
+
+            # Text of one user is saved to one file.
             with open(user_data_dir + conf.get_data_filename_via_template('text', userid=uid, n_samples=self.seqLen),
                       'w') as fp:
                 csv_writer = csv.writer(fp)
@@ -366,7 +367,6 @@ class DataGenerator:
     def save_data(self):
         uid_fname = conf.get_data_filename_via_template('uid', n_users=len(self.uidList), n_samples=self.seqLen)
         seq_fname = conf.get_data_filename_via_template('seq', n_users=len(self.uidList), n_samples=self.seqLen)
-        tf_idf_fname = conf.get_data_filename_via_template('tfidf', n_users=len(self.uidList), n_samples=self.seqLen)
         # Save user ids
         with open(uid_fname, 'w') as fp:
             csv_writer = csv.writer(fp)
@@ -377,32 +377,20 @@ class DataGenerator:
             csv_writer = csv.writer(fp)
             csv_writer.writerows(self.sequences)
             logger.info('Sequences data is saved in file %s. ' % seq_fname)
-        # Save tfidf result
-        # with open(tf_idf_fname, 'w') as fp:
-        #     csv_writer = csv.writer(fp)
-        #     csv_writer.writerow(self.tfIdfWords)
-        #     csv_writer.writerows(self.tfIdfWeights)
-        #     logger.info('TF-IDF data is saved in file %s. ' % tf_idf_fname)
 
     def recover_text_list(self, debug=False):
         user_data_dir = conf.get_absolute_path('data')
         text_list = []
-        uid_list = []
+
+        with open(conf.get_data_filename_via_template('uid', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES)) as fp:
+            uid_list = [int(i) for i in fp.readline().split(',')]
 
         debug_flag = 0
-        for filename in os.listdir(user_data_dir):
+        for uid in uid_list:
             if debug and debug_flag > 0:
                 break
-            try:
-                if filename.split('_')[0] != 'Text':
-                    continue
-                uid = int(filename.split('_')[1])
-                uid_list.append(uid)
-            except ValueError as msg:
-                logger.info('Invalid file name %s' % msg)
-                continue
-            absolute_mblogs_fname = user_data_dir + filename
-            with open(absolute_mblogs_fname, 'r') as fp:
+
+            with open(conf.get_data_filename_via_template('text', user_id=uid, n_samples=conf.N_SAMPLES)) as fp:
                 csv_reader = csv.reader(fp)
                 try:
                     while True:

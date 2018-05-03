@@ -4,7 +4,7 @@ import numpy as np
 import csv
 import os
 
-lda_corpus_path = conf.get_data_filename_via_template('lda', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES,
-                                                      n_dims=500, postfix='mm')
-print(lda_corpus_path)
-conf.mk_dir(lda_corpus_path)
+with open(conf.get_data_filename_via_template('uid', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES)) as fp:
+    uid_list = [int(i) for i in fp.readline().split(',')]
+for uid in uid_list:
+    print(conf.get_data_filename_via_template('text', user_id=uid, n_samples=conf.N_SAMPLES))

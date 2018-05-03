@@ -49,7 +49,6 @@ class TextProcessor:
         self.w2vVecPath = conf.get_data_filename_via_template('model', model_type='w2v', n_users=conf.N_USERS,
                                                               n_samples=conf.N_SAMPLES, n_dims='{n_dims}',
                                                               model_filename='vec.txt')
-        self.tfIdfCorpus = None
 
     def load_model(self, model_type, n_dims=conf.N_DIMS):
         model = None
@@ -97,14 +96,14 @@ class TextProcessor:
         self.tfIdfModel.save(self.tfIdfPath)
         logger.info('TF-IDF model has been saved in %s.' % self.tfIdfPath)
 
-        self.tfIdfCorpus = self.tfIdfModel[corpus]
+        tfidf_corpus = self.tfIdfModel[corpus]
         tfidf_corpus_path = conf.get_data_filename_via_template('tfidf', n_users=conf.N_USERS,  postfix='mm',
                                                                 n_samples=conf.N_SAMPLES)
-        corpora.MmCorpus.serialize(tfidf_corpus_path, self.tfIdfCorpus)
+        corpora.MmCorpus.serialize(tfidf_corpus_path, tfidf_corpus)
         logger.info('TF-IDF corpus with a shape of %s has been saved in %s.' %
-                    (np.array(self.tfIdfCorpus).shape, tfidf_corpus_path))
+                    (np.array(tfidf_corpus).shape, tfidf_corpus_path))
 
-        return self.tfIdfCorpus
+        return tfidf_corpus
 
     def lsi_transform(self, corpus_tf_idf, n_topics=conf.N_DIMS):
         """
@@ -220,14 +219,14 @@ class TextProcessor:
         w2v_corpus_path = conf.get_data_filename_via_template(
             'w2v', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES, n_dims=n_dims)
         conf.mk_dir(w2v_corpus_path)
-        with open(w2v_corpus_path, 'wb') as fp:
+
+        with open(w2v_corpus_path, 'w') as fp:
             csv_writer = csv.writer(fp)
             for line in w2v_corpus:
-                csv_writer.writerrow(line)
-            logger.info('W2v corpus has been saved in %s. ' % w2v_corpus_path)
+                csv_writer.writerow(line)
+        logger.info('W2v corpus has been saved in %s. ' % w2v_corpus_path)
 
         del self.w2vModel
-        del w2v_corpus
         gc.collect()
 
         return w2v_corpus
@@ -279,8 +278,6 @@ if __name__ == '__main__':
     #         n_samples=conf.N_SAMPLES,
     #         n_dims=conf.N_DIMS)
     # tp.load_model('lsi')
-    tp.load_corpus('tfidf')
-    import numpy as np
-    print(np.array(tp.tfIdfCorpus).shape)
+    tp.w2v_transform([['你好啊', 'hell0'], ['123', 'forfor']], n_dims=2)
 
 

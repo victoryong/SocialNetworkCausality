@@ -123,7 +123,7 @@ if __name__ == '__main__':
 
     data = []
     idx = 0
-    with open(conf.get_data_filename_via_template('lsi', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS)) as fp:
+    with open(conf.get_data_filename_via_template('w2v', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS)) as fp:
         csv_reader = csv.reader(fp)
         samples = np.zeros((N_SAMPLES, N_DIMS))
         for line in csv_reader:

@@ -16,106 +16,72 @@ from text_processing import TextProcessor
 
 logger = conf.get_console_logger(__name__)
 
-# 'train' for training model, 'lmodel' for loading model, 'lcorpus' for loading corpus, else for nothing.
-target = ['train', 'lcorpus', 'lmodel']
+# 0 for training model, 1 for loading corpus, 2 for loading model, else for nothing.
 args = {
-    'tfidf': '', #''lcorpus',
-    'lsi': '',# 'train',
-    'lda': '', #''train',
-    'w2v': 'train'#'train'
+    'tfidf': 0,
+    'lsi': 0,
+    'lda': 0,
+    'w2v': 0
 }
 
 
-n_dims_list = [500, 800, 1000]  # Define a list of n_dims of vectors that the texts are transformed to.
+n_dims_list = [500, 800, 1000]  # A list of n_dims of vectors that the texts are transformed to.
 DG = DataGenerator()
 TP = TextProcessor()
 
 # Perform tf-idf
 tfidf_corpus = None
-if args['tfidf'] == target[0]:
+if args['tfidf'] == 0:
     DG.recover_text_list()  # DG.textList contains all samples of text in which words are split.
     logger.info('Training tfidf model...')
     tfidf_corpus = TP.tf_idf_transform(DG.textList)
-elif args['tfidf'] == target[1]:
+elif args['tfidf'] == 1:
     logger.info('Loading tfidf corpus from file...')
     tfidf_corpus = TP.load_corpus('tfidf')
-elif args['tfidf'] == target[2]:
+elif args['tfidf'] == 2:
     logger.info('Loading tfidf model from disk...')
     TP.load_model('tfidf')
 
 # Perform lsi
-lsi_corpus_list = []
-lsi_model_list = []
-if args['lsi'] == target[0]:
+lsi_corpus = None
+if args['lsi'] == 0:
     logger.info('Training lsi model...')
     for i in n_dims_list:
-        # lsi_corpus_list.append(TP.lsi_transform(TP.tfIdfCorpus, n_topics=i))
-        TP.lsi_transform(TP.lsi_transform(tfidf_corpus, n_topics=i))
-        # print(np.array(TP.lsiCorpus).shape)
-elif args['lsi'] == target[1]:
-    logger.info('Loading lsi corpus from file...')
-    for i in n_dims_list:
         try:
-            lsi_corpus_list.append(TP.load_corpus('lsi', n_dims=i))
-        except Exception as e:
-            logger.error('Failed to load lsi corpus with a n_dims of %d! [%s]' % (i, str(e)))
-elif args['lsi'] == target[2]:
-    logger.info('Loading lsi model from disk...')
-    for i in n_dims_list:
-        try:
-            lsi_model_list.append(TP.load_model('lsi', n_dims=i))
-        except Exception as e:
-            logger.error('Failed to load lsi model with a n_dims of %d! [%s]' % (i, str(e)))
+            lsi_corpus = TP.lsi_transform(tfidf_corpus, n_topics=i)
+        except MemoryError as e:
+            logger.error('%s. %s' % (str(e), conf.get_memory_state()))
+        del lsi_corpus
+        del TP.lsiModel
+        gc.collect()
 
 # Perform lda
-if args['lda'] == target[0]:
+lda_corpus = None
+if args['lda'] == 0:
     logger.info('Training lda model...')
     for i in n_dims_list:
         try:
-            TP.lda_transform(TP.tfIdfCorpus, n_topics=i)
+            lda_corpus = TP.lda_transform(tfidf_corpus, n_topics=i)
         except MemoryError as e:
             logger.error('%s. %s' % (str(e), conf.get_memory_state()))
+        del lda_corpus
         del TP.ldaModel
         gc.collect()
-elif args['lda'] == target[1]:
-    logger.info('Loading lda corpus from file...')
-    for i in n_dims_list:
-        try:
-            TP.load_corpus('lda', n_dims=i)
-        except Exception as e:
-            logger.error('Failed to load lda corpus with a n_dims of %d! [%s]' % (i, str(e)))
-elif args['lda'] == target[2]:
-    logger.info('Loading lsi model from disk...')
-    for i in n_dims_list:
-        try:
-            TP.load_model('lda', n_dims=i)
-        except Exception as e:
-            logger.error('Failed to load lda model with a n_dims of %d! [%s]' % (i, str(e)))
 
 # Perform word2vec
-if len(DG.textList) == 0:
-    DG.recover_text_list()
+if args['w2v'] == 0:
+    if len(DG.textList) == 0:
+        DG.recover_text_list()
+    del tfidf_corpus
+    gc.collect()
 
-w2v_corpus_list = []
-w2v_model_list = []
-if args['w2v'] == target[0]:
+    w2v_corpus = None
     logger.info('Training w2v model...')
     for i in n_dims_list:
-        w2v_corpus_list.append(TP.w2v_transform(DG.textList, n_dims=i))
-elif args['w2v'] == target[1]:
-    logger.info('Loading w2v corpus from file...')
-    for i in n_dims_list:
-        try:
-            w2v_corpus_list.append(TP.load_corpus('w2v', n_dims=i))
-        except Exception as e:
-            logger.error('Failed to load w2v corpus with a n_dims of %d! [%s]' % (i, str(e)))
-elif args['w2v'] == target[2]:
-    logger.info('Loading w2v model from disk...')
-    for i in n_dims_list:
-        try:
-            w2v_model_list.append(TP.load_model('w2v', n_dims=i))
-        except Exception as e:
-            logger.error('Failed to load w2v model with a n_dims of %d! [%s]' % (i, str(e)))
+        w2v_corpus = TP.w2v_transform(DG.textList, n_dims=i)
+        del w2v_corpus
+        del TP.w2vModel
+        gc.collect()
 
 
 
