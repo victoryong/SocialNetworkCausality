@@ -21,10 +21,12 @@ N_SAMPLES = conf.N_SAMPLES
 N_DIMS = conf.N_DIMS
 
 
-def te_transform(data, lag=1):
+def te_transform(data, vec_type, n_dims=conf.N_DIMS, lag=1):
     """
     Perform transfer entropy on each pair of samples to find out causal relationships.
     :param data: 3d array. Each element is a matrix of samples of a user.
+    :param vec_type: Type of text processing.
+    :param n_dims: Numbers of dimensions.
     :param lag: Length of lag. Default is 1.
     :return: Causal network and te matrix.
     """
@@ -33,6 +35,7 @@ def te_transform(data, lag=1):
     cn = np.zeros((n_nodes, n_nodes))
     te_mat = np.zeros((n_nodes, n_nodes))
 
+    logger.info('Calculating te...')
     # Calculate te and fill with the causal network.
     for i in range(n_nodes):
         sample_i = data[i]
@@ -48,6 +51,10 @@ def te_transform(data, lag=1):
                 sample_j_f = sample_j[:-lag]
                 te_j_i = cmi(sample_j_f, sample_i_p, sample_j_p)
                 te_mat[j][i] = te_j_i
+    te_path = conf.get_data_filename_via_template(
+        'te_' + vec_type, n_users=n_nodes, n_samples=conf.N_SAMPLES, n_dims=n_dims, lag=lag)
+    np.savetxt(te_path, te_mat, delimiter=',', fmt='%f')
+    logger.info('Te result has been saved in %s. ' % te_path)
     return cn, te_mat
 
 
@@ -56,8 +63,7 @@ def evaluate(n_users, n_samples, n_dims):
     Evaluate result via precise, recall and f-value.
     :return: Accuracy, recall and f1.
     """
-    result = np.loadtxt(conf.get_data_filename_via_template('te', n_users=n_users, n_samples=n_samples, n_dims=n_dims),
-                        delimiter=',')
+    result = np.loadtxt(conf.get_data_filename_via_template('te_text', n_users=n_users, n_samples=n_samples, n_dims=n_dims),delimiter=',')
     # print(result)
     new_result = np.zeros(result.shape)
     new_result_state = np.zeros(result.shape).astype(int)
@@ -116,7 +122,7 @@ if __name__ == '__main__':
     task = 1
 
     if task == 1:
-        dims = [500, 800, 1000]
+        dims = [100]
         for n_dims in dims:
             evaluate(N_USERS, N_SAMPLES, n_dims)
         exit(0)

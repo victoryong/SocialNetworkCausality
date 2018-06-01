@@ -28,7 +28,7 @@ END_TIME = datetime.strptime('2017-09-30 23:59:59', TIME_FORMAT)
 N_USERS = 10
 TIME_STEP = 3600 * 24
 N_SAMPLES = 2192
-N_DIMS = 1000
+N_DIMS = 500
 
 # Data directories
 ROOT = sys.path[1] if os.name == 'posix' else sys.path[0]

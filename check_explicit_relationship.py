@@ -119,21 +119,45 @@ if __name__ == '__main__':
     #         find_retweet_users(uid)
     #     except ValueError as msg:
     #         logger.error('Not a valid file. Skip it. ' + str(msg))
-    uid_list = []
-    user_mblogs_dir = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs/'
-    for filename in os.listdir(user_mblogs_dir):
-        try:
-            uid = int(filename.split('-')[0])
-            uid_list.append(uid)
-        except ValueError as msg:
-            logger.error('Not a valid file. Skip it. ' + str(msg))
-    uid_pairs = []
+
+    # uid_list = []
+    # user_mblogs_dir = conf.get_absolute_path('DATA_ROOT') + '/user_mblogs/'
+    # for filename in os.listdir(user_mblogs_dir):
+    #     try:
+    #         uid = int(filename.split('-')[0])
+    #         uid_list.append(uid)
+    #     except ValueError as msg:
+    #         logger.error('Not a valid file. Skip it. ' + str(msg))
+    # uid_pairs = []
+    # for uid in uid_list:
+    #     for uid_2 in uid_list:
+    #         if uid != uid_2:
+    #             uid_pairs.append((uid, uid_2))
+    # users_retweet = check_retweet(uid_pairs)
+    # with open(conf.get_absolute_path('DATA_ROOT') + '/users_retweet.csv', 'w', encoding='utf-8') as fp:
+    #     csv_writer = csv.writer(fp)
+    #     for idx in range(len(uid_pairs)):
+    #         csv_writer.writerow([str(uid_pairs[idx][0]) + '-->' + str(uid_pairs[idx][1]), str(users_retweet[idx])])
+
+    # Make transfer
+    uid_list = np.loadtxt(conf.get_data_filename_via_template('uid', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES),
+                          delimiter=',', dtype=np.int)
+    uid_dict = {}
+    idx = 0
     for uid in uid_list:
-        for uid_2 in uid_list:
-            if uid != uid_2:
-                uid_pairs.append((uid, uid_2))
-    users_retweet = check_retweet(uid_pairs)
-    with open(conf.get_absolute_path('DATA_ROOT') + '/users_retweet.csv', 'w', encoding='utf-8') as fp:
-        csv_writer = csv.writer(fp)
-        for idx in range(len(uid_pairs)):
-            csv_writer.writerow([str(uid_pairs[idx][0]) + '-->' + str(uid_pairs[idx][1]), str(users_retweet[idx])])
+        uid_dict[uid] = idx
+        idx += 1
+    print(uid_list)
+    transfer = np.zeros((conf.N_USERS, conf.N_USERS))
+
+    with open(conf.get_absolute_path('data') + 'users_retweet.csv', encoding='utf-8') as fp:
+        csv_reader = csv.reader(fp)
+        for r in csv_reader:
+            if r[1] != '0':
+                us = r[0].split('-->')
+                us = [int(x) for x in us]
+                if us[0] in uid_dict and us[1] in uid_dict:
+                    transfer[uid_dict[us[0]], uid_dict[us[1]]] += 1
+                else:
+                    print(us)
+    print(transfer)

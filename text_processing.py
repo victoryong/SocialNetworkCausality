@@ -233,29 +233,33 @@ class TextProcessor:
 
     def load_corpus(self, model_type, n_dims=conf.N_DIMS, dense=False):
         corpus = None
-        if model_type == 'tfidf':
-            corpus = corpora.MmCorpus(
-                conf.get_data_filename_via_template(
-                    'tfidf', n_users=conf.N_USERS, postfix='mm', n_samples=conf.N_SAMPLES))
-            self.tfIdfCorpus = corpus
-        elif model_type in ['lsi', 'lda']:
-            corpus = corpora.MmCorpus(conf.get_data_filename_via_template(
-                model_type, n_users=conf.N_USERS, n_samples=conf.N_SAMPLES, n_dims=n_dims, postfix='mm'))
-        elif model_type == 'w2v':
-            pass
+        try:
+            if model_type == 'tfidf':
+                corpus = corpora.MmCorpus(
+                    conf.get_data_filename_via_template(
+                        'tfidf', n_users=conf.N_USERS, postfix='mm', n_samples=conf.N_SAMPLES))
 
-        logger.info('%s corpus with a shape of %s has been loaded. ' % (model_type, np.array(corpus).shape))
-        if dense and model_type in ['tfidf', 'lsi', 'lda']:
-            if self.dictionary is None and os.path.exists(self.dictPath):
-                self.dictionary = corpora.Dictionary.load(self.dictPath)
-            corpus = matutils.corpus2dense(corpus, self.dictionary.num_pos, conf.N_SAMPLES)
-        else:
-            corpus = np.array(corpus)
+            elif model_type in ['lsi', 'lda']:
+                corpus = corpora.MmCorpus(conf.get_data_filename_via_template(
+                    model_type, n_users=conf.N_USERS, n_samples=conf.N_SAMPLES, n_dims=n_dims, postfix='mm'))
+            elif model_type == 'w2v':
+                corpus = np.loadtxt(conf.get_data_filename_via_template(
+                    model_type, n_users=conf.N_USERS, n_samples=conf.N_SAMPLES, n_dims=n_dims), dtype=np.float,
+                    delimiter=',')
+
+            logger.info('%s corpus with a shape of %s has been loaded. ' % (model_type, np.array(corpus).shape))
+
+            if dense and model_type in ['tfidf', 'lsi', 'lda']:
+                corpus = matutils.corpus2dense(corpus, n_dims, conf.N_SAMPLES * conf.N_USERS, dtype=np.float).T
+            else:
+                corpus = np.array(corpus)
+        except Exception as e:
+            raise e
         return corpus
 
     @staticmethod
-    def corpus2dense(corpus, n_terms, n_docs=conf.N_SAMPLES):
-        return matutils.corpus2dense(corpus, n_terms, n_docs)
+    def corpus2dense(corpus, n_terms, n_docs=conf.N_SAMPLES, dtype=np.float):
+        return matutils.corpus2dense(corpus, n_terms, n_docs, dtype).T
 
 if __name__ == '__main__':
     tp = TextProcessor()
