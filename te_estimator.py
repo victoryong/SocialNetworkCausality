@@ -51,7 +51,7 @@ def te_transform(data, vec_type, n_dims=conf.N_DIMS, lag=1):
                 sample_j_f = sample_j[:-lag]
                 te_j_i = cmi(sample_j_f, sample_i_p, sample_j_p)
                 te_mat[j][i] = te_j_i
-    te_path = conf.get_data_filename_via_template(
+    te_path = conf.get_filename_via_tpl(
         'te_' + vec_type, n_users=n_nodes, n_samples=conf.N_SAMPLES, n_dims=n_dims, lag=lag)
     np.savetxt(te_path, te_mat, delimiter=',', fmt='%f')
     logger.info('Te result has been saved in %s. ' % te_path)
@@ -63,7 +63,7 @@ def evaluate(n_users, n_samples, n_dims):
     Evaluate result via precise, recall and f-value.
     :return: Accuracy, recall and f1.
     """
-    result = np.loadtxt(conf.get_data_filename_via_template('te_text', n_users=n_users, n_samples=n_samples, n_dims=n_dims),delimiter=',')
+    result = np.loadtxt(conf.get_filename_via_tpl('te_text', n_users=n_users, n_samples=n_samples, n_dims=n_dims), delimiter=',')
     # print(result)
     new_result = np.zeros(result.shape)
     new_result_state = np.zeros(result.shape).astype(int)
@@ -77,7 +77,7 @@ def evaluate(n_users, n_samples, n_dims):
     #         if abs(result[i][j]-result[j][i]) < 0.1:
     #             new_result[i][j] = new_result[j][i] = 0
     # print(new_result)
-    with open(conf.get_data_filename_via_template('re', n_users=n_users, n_samples=n_samples, n_dims=n_dims), 'w') as fp:
+    with open(conf.get_filename_via_tpl('re', n_users=n_users, n_samples=n_samples, n_dims=n_dims), 'w') as fp:
         csv_writer = csv.writer(fp)
         csv_writer.writerows(new_result)
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
     data = []
     idx = 0
-    with open(conf.get_data_filename_via_template('w2v', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS)) as fp:
+    with open(conf.get_filename_via_tpl('w2v', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS)) as fp:
         csv_reader = csv.reader(fp)
         samples = np.zeros((N_SAMPLES, N_DIMS))
         for line in csv_reader:
@@ -148,10 +148,10 @@ if __name__ == '__main__':
     print(data.shape)
 
     causal_network, te_matrix = te_transform(data)
-    with open(conf.get_data_filename_via_template('te', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS), 'w') as fp:
+    with open(conf.get_filename_via_tpl('te', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS), 'w') as fp:
         csv_writer = csv.writer(fp)
         csv_writer.writerows(te_matrix)
-        logger.info(conf.get_data_filename_via_template('te', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS) + ' saved.')
+        logger.info(conf.get_filename_via_tpl('te', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS) + ' saved.')
 
 
 

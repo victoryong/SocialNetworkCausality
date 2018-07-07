@@ -140,7 +140,7 @@ if __name__ == '__main__':
     #         csv_writer.writerow([str(uid_pairs[idx][0]) + '-->' + str(uid_pairs[idx][1]), str(users_retweet[idx])])
 
     # Make transfer
-    uid_list = np.loadtxt(conf.get_data_filename_via_template('uid', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES),
+    uid_list = np.loadtxt(conf.get_filename_via_tpl('uid', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES),
                           delimiter=',', dtype=np.int)
     uid_dict = {}
     idx = 0

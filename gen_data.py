@@ -2,14 +2,14 @@
 """
 Created on Sun Oct 29 20:36:54 2017
 
-@author: Xie Yong
+@author: Victor Xie
 
 Read data files and generate input data in the form that is needed below.
 """
 
 import csv
 import gc
-import os
+import sys
 import re
 from datetime import datetime, timedelta
 
@@ -73,7 +73,6 @@ def content_filter(s, repl=''):
         s = s.replace(word, repl)
     return s
 
-
 # USER_MBLOGS is a dict consists of dicts. Each element has a key of user id and value of user mblogs info.
 # It's used when recovering data from mongodb.
 #
@@ -98,116 +97,110 @@ COUNTING = False
 SAVING = False
 
 
-def calculate_pub_time(pub_time, crawl_time):
-    crawl_time_dt = datetime.strptime(crawl_time, conf.TIME_FORMAT)
-    if len(FULL_TIME_FORM.findall(pub_time)):
-        new_pub_time = pub_time
-    elif len(HALF_TIME_FORM.findall(pub_time)):
-        new_pub_time = '2017-' + pub_time
-    elif len(JUST_NOW_TIME_FORM.findall(pub_time)):
-        new_pub_time = crawl_time_dt.strftime(conf.PUB_TIME_FORMAT)
-    elif len(YESTERDAY_TIME_FORM.findall(pub_time)):
-        new_pub_time = (crawl_time_dt - timedelta(1)).strftime(conf.PUB_TIME_FORMAT)
-    else:
-        offset = OFFSET_TIME_FORM.findall(pub_time)
-        if len(offset):
-            try:
-                hours = int(offset[0][0])
-            except ValueError:
-                hours = 0
-            try:
-                minutes = int(offset[0][1])
-            except ValueError:
-                minutes = 0
-            new_pub_time = (crawl_time_dt - timedelta(hours=hours, minutes=minutes)).strftime(conf.PUB_TIME_FORMAT)
-        else:
-            logger.error('Error: Wrong pub_time string. %s' % pub_time)
+def get_data_from_mongodb(host='127.0.0.1', port=27017, **kwargs):
+    def calculate_pub_time(pub_time, crawl_time):
+        crawl_time_dt = datetime.strptime(crawl_time, conf.TIME_FORMAT)
+        if len(FULL_TIME_FORM.findall(pub_time)):
             new_pub_time = pub_time
-    return new_pub_time
+        elif len(HALF_TIME_FORM.findall(pub_time)):
+            new_pub_time = '2017-' + pub_time
+        elif len(JUST_NOW_TIME_FORM.findall(pub_time)):
+            new_pub_time = crawl_time_dt.strftime(conf.PUB_TIME_FORMAT)
+        elif len(YESTERDAY_TIME_FORM.findall(pub_time)):
+            new_pub_time = (crawl_time_dt - timedelta(1)).strftime(conf.PUB_TIME_FORMAT)
+        else:
+            offset = OFFSET_TIME_FORM.findall(pub_time)
+            if len(offset):
+                try:
+                    hours = int(offset[0][0])
+                except ValueError:
+                    hours = 0
+                try:
+                    minutes = int(offset[0][1])
+                except ValueError:
+                    minutes = 0
+                new_pub_time = (crawl_time_dt - timedelta(hours=hours, minutes=minutes)).strftime(conf.PUB_TIME_FORMAT)
+            else:
+                logger.error('Error: Wrong pub_time string. %s' % pub_time)
+                new_pub_time = pub_time
+        return new_pub_time
 
+    def is_text_invalid(text):
+        # 无/抱歉，您...
+        if len(re.findall(r'^\u65e0$|^\u62b1\u6b49\uff0c\u60a8', text)):
+            return True
+        return False
 
-def is_text_invalid(text):
-    # 无/抱歉，您...
-    if len(re.findall(r'^\u65e0$|^\u62b1\u6b49\uff0c\u60a8', text)):
-        return True
-    return False
+    def add_mblog_item(uid, mid, text, pub_time, crawl_time):
+        if uid not in USER_MBLOGS:
+            USER_MBLOGS[uid] = []
+        pub_time = calculate_pub_time(pub_time, crawl_time)
+        if is_text_invalid(text):
+            # INVALID_COUNT += 1
+            return None
+        mblog_item = {'mid': mid, 'text': text, 'pub_time': pub_time}
+        USER_MBLOGS[uid].append(mblog_item)
+        return USER_MBLOGS[uid]
 
+    def save_user_mblogs(uids):
+        user_mblog_fname = conf.get_absolute_path('data') + '/user_mblogs.csv'
+        # All in one
+        #
+        # with open(user_mblog_fname, 'w', encoding='utf-8') as fp:
+        #     csv_writer = csv.writer(fp)
+        #     csv_writer.writerow(['uid', 'mid', 'pub_time', 'text'])
+        #     # try:
+        #     #     while True:
+        #     #         item = USER_MBLOGS.popitem()
+        #     #         uid = item[0]
+        #     #         mblog_list = item[1]
+        #     #         for mblog in mblog_list:
+        #     #             csv_writer.writerow([uid, mblog['mid'], mblog['pub_time'], mblog['text']])
+        #     # except KeyError as e:
+        #     #     print(e)
+        #     for i in uids:
+        #         uid = str(i)
+        #         mblog_list = USER_MBLOGS[uid]
+        #         for mblog in mblog_list:
+        #             csv_writer.writerow([uid, mblog['mid'], mblog['pub_time'], mblog['text']])
+        #         logger.info('Mblogs of user "' + uid + '" saved. ')
 
-def add_mblog_item(uid, mid, text, pub_time, crawl_time):
-    if uid not in USER_MBLOGS:
-        USER_MBLOGS[uid] = []
-    pub_time = calculate_pub_time(pub_time, crawl_time)
-    if is_text_invalid(text):
-        # INVALID_COUNT += 1
-        return None
-    mblog_item = {'mid': mid, 'text': text, 'pub_time': pub_time}
-    USER_MBLOGS[uid].append(mblog_item)
-    return USER_MBLOGS[uid]
+        #     One in one
+        user_mblog_root = conf.get_absolute_path('data') + '/user_mblogs'
+        for i in uids:
+            uid = str(i)
+            try:
+                mblog_list = USER_MBLOGS[uid]
+            except KeyError:
+                logger.error('No mblogs records about user %s' % uid)
+                continue
+            user_mblog_fname = user_mblog_root + '/' + uid + '-' + str(len(mblog_list)) + '.csv'
+            with open(user_mblog_fname, 'w') as fp:
+                csv_writer = csv.writer(fp)
+                csv_writer.writerow(['uid', 'mid', 'pub_time', 'text'])
+                for mblog in mblog_list:
+                    csv_writer.writerow([uid, mblog['mid'], mblog['pub_time'], mblog['text']])
+            logger.info('Mblogs of user "' + uid + '" saved. ')
+        logger.info('User mblog counts saved successfully in file. (%s)' % user_mblog_fname)
 
+    def add_user_mblog_counts(uid):
+        if uid not in USER_MBLOGS_COUNTS:
+            USER_MBLOGS_COUNTS[uid] = 0
+        USER_MBLOGS_COUNTS[uid] += 1
 
-def save_user_mblogs(uids):
-    user_mblog_fname = conf.get_absolute_path('data') + '/user_mblogs.csv'
-    # All in one
-    #
-    # with open(user_mblog_fname, 'w', encoding='utf-8') as fp:
-    #     csv_writer = csv.writer(fp)
-    #     csv_writer.writerow(['uid', 'mid', 'pub_time', 'text'])
-    #     # try:
-    #     #     while True:
-    #     #         item = USER_MBLOGS.popitem()
-    #     #         uid = item[0]
-    #     #         mblog_list = item[1]
-    #     #         for mblog in mblog_list:
-    #     #             csv_writer.writerow([uid, mblog['mid'], mblog['pub_time'], mblog['text']])
-    #     # except KeyError as e:
-    #     #     print(e)
-    #     for i in uids:
-    #         uid = str(i)
-    #         mblog_list = USER_MBLOGS[uid]
-    #         for mblog in mblog_list:
-    #             csv_writer.writerow([uid, mblog['mid'], mblog['pub_time'], mblog['text']])
-    #         logger.info('Mblogs of user "' + uid + '" saved. ')
+    def save_user_mblog_counts():
+        mblog_counts = np.array(list(USER_MBLOGS_COUNTS.values()))
+        mblog_ordered_idx = np.argsort(-mblog_counts)
+        user_ids = np.array(list(USER_MBLOGS_COUNTS))[mblog_ordered_idx]
+        mblog_counts = mblog_counts[mblog_ordered_idx]
 
-    #     One in one
-    user_mblog_root = conf.get_absolute_path('data') + '/user_mblogs'
-    for i in uids:
-        uid = str(i)
-        try:
-            mblog_list = USER_MBLOGS[uid]
-        except KeyError:
-            logger.error('No mblogs records about user %s' % uid)
-            continue
-        user_mblog_fname = user_mblog_root + '/' + uid + '-' + str(len(mblog_list)) + '.csv'
-        with open(user_mblog_fname, 'w') as fp:
+        user_mblog_statistic_fname = conf.get_absolute_path('data') + '/user_mblog_statistic.csv'
+        with open(user_mblog_statistic_fname, 'w') as fp:
             csv_writer = csv.writer(fp)
-            csv_writer.writerow(['uid', 'mid', 'pub_time', 'text'])
-            for mblog in mblog_list:
-                csv_writer.writerow([uid, mblog['mid'], mblog['pub_time'], mblog['text']])
-        logger.info('Mblogs of user "' + uid + '" saved. ')
-    logger.info('User mblog counts saved successfully in file. (%s)' % user_mblog_fname)
+            csv_writer.writerows(zip(user_ids, mblog_counts))
+            logger.info('User mblog counts saved successfully in file. (%s)' % user_mblog_statistic_fname)
+        return user_ids, mblog_counts
 
-
-def add_user_mblog_counts(uid):
-    if uid not in USER_MBLOGS_COUNTS:
-        USER_MBLOGS_COUNTS[uid] = 0
-    USER_MBLOGS_COUNTS[uid] += 1
-
-
-def save_user_mblog_counts():
-    mblog_counts = np.array(list(USER_MBLOGS_COUNTS.values()))
-    mblog_ordered_idx = np.argsort(-mblog_counts)
-    user_ids = np.array(list(USER_MBLOGS_COUNTS))[mblog_ordered_idx]
-    mblog_counts = mblog_counts[mblog_ordered_idx]
-
-    user_mblog_statistic_fname = conf.get_absolute_path('data') + '/user_mblog_statistic.csv'
-    with open(user_mblog_statistic_fname, 'w') as fp:
-        csv_writer = csv.writer(fp)
-        csv_writer.writerows(zip(user_ids, mblog_counts))
-        logger.info('User mblog counts saved successfully in file. (%s)' % user_mblog_statistic_fname)
-    return user_ids, mblog_counts
-
-
-def statistic_data_from_mongodb(host='127.0.0.1', port=27017, **kwargs):
     client = pymongo.MongoClient(host=host, port=port)
     social_db = client['user_social']
     mblog_coll = social_db['Mblog']
@@ -284,7 +277,7 @@ def find_top_ten_mblogs():
                 #     continue
                 # if idx == 15:
                 #     break
-    statistic_data_from_mongodb(host='10.21.50.32', uid_list=top_ten)
+    get_data_from_mongodb(host='10.21.50.32', uid_list=top_ten)
 
 
 def find_default_user_mblogs(**kwargs):
@@ -301,37 +294,74 @@ def find_default_user_mblogs(**kwargs):
                 uid = int(line.split('|')[0])
                 print(uid)
                 uid_list.append(uid)
-    statistic_data_from_mongodb(host='10.21.50.32', uid_list=uid_list)
+    get_data_from_mongodb(host='10.21.50.32', uid_list=uid_list)
+
+
+class MblogInfo:
+    def __init__(self, mblog_type, db_host, db_port, db_name, coll_name, pd_names,
+                 start_time, end_time, time_format, time_step):
+        self.mblogType, self.dbHost, self.dbPort, self.dbName, self.collName, self.pdNames, \
+        self.startTime, self.endTime, self.timeFormat = \
+            mblog_type, db_host, db_port, db_name, coll_name, pd_names, \
+            datetime.strptime(start_time, time_format), datetime.strptime(end_time, time_format), time_format
+        if isinstance(time_step, list):
+            self.timeStep = []
+            time_sum = 0
+            for i in range(len(time_step)):
+                time_sum += time_step[i]
+                self.timeStep.append(time_sum)
+
+            total_seconds = (self.endTime - self.startTime).total_seconds()
+            l = int(total_seconds / self.timeStep[-1])
+            self.seqLen = (l + 1) * len(time_step) if l * self.timeStep[-1] < int(total_seconds) else l * len(time_step)
+        else:
+            self.timeStep = time_step
+            self.seqLen = int(((self.endTime - self.startTime).total_seconds() / self.timeStep))
 
 
 class DataGenerator:
-    def __init__(self, time_step=24 * 3600):
+    def __init__(self, mblog_info):
         self.uidList = []
         self.sequences = []
         self.textList = []
-        self.timeStep = time_step
-        self.seqLen = int(((conf.END_TIME - conf.START_TIME).total_seconds() / self.timeStep))
-
-    def sequence_idx(self, time_str):
-        return int(
-            ((conf.END_TIME - datetime.strptime(time_str, conf.PUB_TIME_FORMAT)).total_seconds() / self.timeStep))
+        self.mblogInfo = mblog_info
 
     def construct_time_series_data(self):
-        user_mblogs_dir = conf.get_absolute_path('data') + 'user_mblogs/'
-        user_data_dir = conf.get_absolute_path('data')
-        for filename in os.listdir(user_mblogs_dir):
-            try:
-                uid = int(filename.split('-')[0])
-            except ValueError as msg:
-                logger.info('Invalid file name %s' % msg)
-                continue
+        mblog_info = self.mblogInfo
 
+        def sequence_idx(time_str):
+            if isinstance(mblog_info.timeStep, int):
+                return int((mblog_info.endTime - datetime.strptime(time_str, mblog_info.timeFormat))
+                           .total_seconds() / mblog_info.timeStep)
+            else:
+                steps_count = len(mblog_info.timeStep)
+                total_seconds = (mblog_info.endTime - datetime.strptime(time_str, mblog_info.timeFormat)).total_seconds()
+                index = int(total_seconds / mblog_info.timeStep[-1])
+                rest = total_seconds - index * mblog_info.timeStep[-1]
+                for i in range(steps_count):
+                    if rest < mblog_info.timeStep[i]:
+                        return index * steps_count + i
+                return (index + 1) * steps_count
+
+        with open(conf.get_absolute_path('data') + 'default_users.txt') as fp:
+            lines = fp.readlines()
+
+        user_mblogs_dir = conf.get_absolute_path('data') + 'user_mblogs/'
+
+        self.uidList = []
+        for line in lines:
+            try:
+                uid, count = int(line.split('|')[0]), int(line.split('|')[1])
+            except ValueError as e:
+                logger.error('Invalid uid or count. %s' % e)
+                continue
+            filename = '{}-{}.csv'.format(uid, count)
             self.uidList.append(uid)
             absolute_mblogs_fname = user_mblogs_dir + filename
 
-            sequence = [0] * self.seqLen
-            text_list = [''] * self.seqLen
-            with open(absolute_mblogs_fname, 'r') as fp:
+            sequence = [0] * mblog_info.seqLen
+            text_list = [''] * mblog_info.seqLen
+            with open(absolute_mblogs_fname) as fp:
                 csv_reader = csv.reader(fp)
                 next(csv_reader)
                 try:
@@ -339,79 +369,85 @@ class DataGenerator:
                         line = next(csv_reader)
                         pub_time = line[2]
                         text = content_filter(line[3]).strip() + ' '
-                        idx = self.sequence_idx(pub_time)
+                        idx = sequence_idx(pub_time)
                         try:
                             sequence[idx] = 1
                             text_list[idx] += text
                         except IndexError:
                             # logger.info('Index(%d) out of range. Cause: pub_time(%s) is out of range. ' % (idx, pub_time))
-                            pass
+                            print('%d, %d' % (len(sequence), idx))
                 except StopIteration:
                     self.sequences.append(sequence)
                     text_list = tokenize(text_list)
-                    self.textList.extend(text_list)
+                    # self.textList.extend(text_list)
                     logger.info('Successfully gen user %d\'s data. ' % uid)
 
             # Text of one user is saved to one file.
-            with open(user_data_dir + conf.get_data_filename_via_template('text', userid=uid, n_samples=self.seqLen),
-                      'w') as fp:
+            with open(conf.get_filename_via_tpl('text', user_id=uid, n_samples=mblog_info.seqLen), 'w') as fp:
                 csv_writer = csv.writer(fp)
                 for row in text_list:
                     csv_writer.writerow([row])
-            del text_list
-        gc.collect()
         # print self.uidList
-        # self.exec_tf_idf()
-        # self.save_data()
+        self.save_sequences()
 
-    def save_data(self):
-        uid_fname = conf.get_data_filename_via_template('uid', n_users=len(self.uidList), n_samples=self.seqLen)
-        seq_fname = conf.get_data_filename_via_template('seq', n_users=len(self.uidList), n_samples=self.seqLen)
+    def save_sequences(self):
+        uid_fname = conf.get_filename_via_tpl('uid', n_users=len(self.uidList), n_samples=mblog_info.seqLen)
+        seq_fname = conf.get_filename_via_tpl('seq', n_users=len(self.uidList), n_samples=mblog_info.seqLen)
         # Save user ids
         with open(uid_fname, 'w') as fp:
             csv_writer = csv.writer(fp)
             csv_writer.writerow(self.uidList)
             logger.info('User id are saved in %s. ' % uid_fname)
-        # Sava sequences
+        # Save sequences
         with open(seq_fname, 'w') as fp:
             csv_writer = csv.writer(fp)
             csv_writer.writerows(self.sequences)
             logger.info('Sequences data is saved in file %s. ' % seq_fname)
 
-    def recover_text_list(self, debug=False):
-        user_data_dir = conf.get_absolute_path('data')
-        text_list = []
 
-        with open(conf.get_data_filename_via_template('uid', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES)) as fp:
-            uid_list = [int(i) for i in fp.readline().split(',')]
+def recover_text_list(n_users, n_samples, debug=False):
+    text_list = []
 
-        debug_flag = 0
-        for uid in uid_list:
-            if debug and debug_flag > 0:
-                break
+    with open(conf.get_filename_via_tpl('uid', n_users=n_users, n_samples=n_samples)) as fp:
+        uid_list = [int(i) for i in fp.readline().split(',')]
 
-            with open(conf.get_data_filename_via_template('text', user_id=uid, n_samples=conf.N_SAMPLES)) as fp:
-                csv_reader = csv.reader(fp)
-                try:
-                    while True:
-                        line = next(csv_reader)
-                        # print line
-                        text = line[0].strip().split(' ')
-                        text_list.append(text)
-                except StopIteration:
-                    logger.info('Successfully recover user %d\'s data. ' % uid)
-            debug_flag += 1
-        print(len(text_list))
-        if debug:
-            print(text_list[:100])
-        self.textList = text_list
-        self.uidList = uid_list
-        return text_list, uid_list
+    debug_flag = 0
+    for uid in uid_list:
+        if debug and debug_flag > 0:
+            break
+
+        csv.field_size_limit(sys.maxsize)
+        with open(conf.get_filename_via_tpl('text', user_id=uid, n_samples=n_samples), encoding='utf-8') as fp:
+            csv_reader = csv.reader(fp)
+            for line in csv_reader:
+                if not len(line) or line[0] == '':
+                    text = []
+                else:
+                    text = line[0].strip().split(' ')
+                    while '' in text:
+                        text.remove('')
+                text_list.append(text)
+            logger.info('Successfully recover user %d\'s data. ' % uid)
+        debug_flag += 1
+    # for i in range(10):
+    #     print(text_list[i])
+    if debug:
+        print(text_list[:100])
+    return text_list
 
 
 if __name__ == '__main__':
-    # statistic_data_from_mongodb(host='10.21.50.32')
+    mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
+                           '2011-10-01', '2017-10-01', '%Y-%m-%d', 24*3600)
+
+    # get_data_from_mongodb(host='10.21.50.32')
     # find_top_ten_mblogs()uid_list=[2263978304, 2846253732, 5032225033, 5213225423]
     # find_default_user_mblogs()
-    DataGenerator().recover_text_list(True)
+
+    mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
+                           '2011-10-01', '2017-09-30', '%Y-%m-%d', [i * 24*3600 for i in [5, 2]])
+
+    DG = DataGenerator(mblog_info)
+    DG.construct_time_series_data()
+    # DG.recover_text_list(True)
 

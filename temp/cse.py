@@ -5,14 +5,15 @@ Created on Thu Oct 23 21:13:40 2014
 @author: yuanchang
 """
 
-import numpy as np
-from pandas import Series
-from utils.te import cmidd
-import os,time,random
+import os
+import random
+import time
 from copy import deepcopy
-import pandas as pd
+
+import numpy as np
 
 import utils.config_util as conf
+from temp.te import cmidd
 
 os.system('cls')
 lagmax = 6
@@ -24,7 +25,7 @@ length = tmax - lagmax-1
 lag_max_pre = np.eye(nnode, dtype=int)
 lag_max_late = np.zeros((nnode,nnode),dtype=np.int)
 lag_te = np.zeros((nnode,nnode))
-sample = np.loadtxt(conf.get_data_filename_via_template('seq', n_users=nnode, n_samples=conf.N_SAMPLES), delimiter=',')
+sample = np.loadtxt(conf.get_filename_via_tpl('seq', n_users=nnode, n_samples=conf.N_SAMPLES), delimiter=',')
 # sample = sample.T
 t = time.time()
 for n in range(nnode):#xrange(0):
@@ -90,10 +91,10 @@ for n in range(nnode):
             break
 
 t2= time.time() - t
-np.savetxt(conf.get_data_filename_via_template(
+np.savetxt(conf.get_filename_via_tpl(
     're_lag_max_pre', postfix='txt', n_users=nnode, n_samples=tmax), lag_max_pre,fmt='%d',delimiter=',')
-np.savetxt(conf.get_data_filename_via_template(
+np.savetxt(conf.get_filename_via_tpl(
     're_lag_max_late', postfix='txt', n_users=nnode, n_samples=tmax),lag_max_late,fmt='%d',delimiter=',')
-np.savetxt(conf.get_data_filename_via_template(
+np.savetxt(conf.get_filename_via_tpl(
     're_lag_te', postfix='txt', n_users=nnode, n_samples=tmax),lag_te,delimiter=',')
 

@@ -5,11 +5,12 @@ Created on Thu Oct 23 21:13:40 2014
 @author: yuanchang
 """
 import random
-import numpy as np
-from utils.te import cmidd
 from copy import deepcopy
 
+import numpy as np
+
 import utils.config_util as conf
+from temp.te import cmidd
 from utils.log import get_console_logger
 
 logger = get_console_logger(__name__)
@@ -84,11 +85,11 @@ def testMNR(lagmax,tmax,resampleTime,nnode,sample,indegreeaverage):
                     lag_max_late[n,i] = 0
             else:
                 break
-    np.savetxt(conf.get_data_filename_via_template(
+    np.savetxt(conf.get_filename_via_tpl(
         'mnr_lag_max_pre', n_users=nnode, n_samples=tmax), lag_max_pre, fmt='%d', delimiter=',')
-    np.savetxt(conf.get_data_filename_via_template(
+    np.savetxt(conf.get_filename_via_tpl(
         'mnr_lag_max_late', n_users=nnode, n_samples=tmax), lag_max_late, fmt='%d', delimiter=',')
-    np.savetxt(conf.get_data_filename_via_template(
+    np.savetxt(conf.get_filename_via_tpl(
         'mnr_lag_te', n_users=nnode, n_samples=tmax), lag_te, delimiter=',')
     logger.info('MNR results have been saved in result folder.')
     return lag_max_pre,lag_max_late,lag_te
@@ -156,11 +157,11 @@ def testCSE(lagmax,tmax,resampleTime,nnode,sample,indegreeaverage):
                     lag_max_late[n,i] = 0
             else:
                 break
-    np.savetxt(conf.get_data_filename_via_template(
+    np.savetxt(conf.get_filename_via_tpl(
         'cse_lag_max_pre', n_users=nnode, n_samples=tmax), lag_max_pre, fmt='%d', delimiter=',')
-    np.savetxt(conf.get_data_filename_via_template(
+    np.savetxt(conf.get_filename_via_tpl(
         'cse_lag_max_late', n_users=nnode, n_samples=tmax), lag_max_late, fmt='%d', delimiter=',')
-    np.savetxt(conf.get_data_filename_via_template(
+    np.savetxt(conf.get_filename_via_tpl(
         'cse_lag_te', n_users=nnode, n_samples=tmax), lag_te, delimiter=',')
     logger.info('CSE results have been saved in result folder.')
     return lag_max_pre,lag_max_late,lag_te
@@ -206,11 +207,11 @@ def testTE(lagmax,tmax,resampleTime,nnode,sample,indegreeaverage):
                     lag_max_late[n,i] = 0
             else:
                 break
-    np.savetxt(conf.get_data_filename_via_template(
+    np.savetxt(conf.get_filename_via_tpl(
         'te_lag_max_pre', n_users=nnode, n_samples=tmax), lag_max_pre, fmt='%d', delimiter=',')
-    np.savetxt(conf.get_data_filename_via_template(
+    np.savetxt(conf.get_filename_via_tpl(
         'te_lag_max_late', n_users=nnode, n_samples=tmax), lag_max_late, fmt='%d', delimiter=',')
-    np.savetxt(conf.get_data_filename_via_template(
+    np.savetxt(conf.get_filename_via_tpl(
         'te_lag_te', n_users=nnode, n_samples=tmax), lag_te, delimiter=',')
     logger.info('TE results have been saved in result folder.')
     return lag_max_pre,lag_max_late,lag_te

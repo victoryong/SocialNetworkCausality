@@ -77,8 +77,17 @@ if __name__ == '__main__':
                      '和我在成都的街头走一走',
                      '直到所有的灯都熄灭了也不停留',
                      '你会挽着我的衣袖',
-                     '我会把手揣进裤兜'])
+                     '我会把手揣进裤兜',
+                     '',
+                     ''])
     print(text)
+
+    import csv
+    with open('test_tokenize.csv', 'w') as fp:
+        csv_writer = csv.writer(fp)
+        for row in text:
+            csv_writer.writerow([row])
+    logger.info('Text saved.')
     # print(''.join(text))
     # for sen in seg_sen:
     #     print(' '.join(sen)+'\n')

@@ -7,17 +7,18 @@ Created on Wed April 25 21:38 2018
 Entry of all procedures. Plenty of available operations can be selected and performed.
 """
 
-import numpy as np
 import gc
+import traceback
+
+import numpy as np
 
 import utils.config_util as conf
-from gen_data import DataGenerator
+from gen_data import DataGenerator, MblogInfo
+from temp.methods import testCSE, testMNR, testTE
+from temp.regression import RegressionMethod
 from text_processing import TextProcessor
 
-from methods import testCSE, testMNR, testTE
-from te_estimator import te_transform
-
-logger = conf.get_console_logger('Main')
+logger = conf.get_console_logger(__name__)
 
 # 1 for training model, 2 for loading corpus, 3 for loading model, else for nothing.
 text_model_args = {
@@ -27,9 +28,26 @@ text_model_args = {
     'w2v': 0
 }
 
-vec_type_list = ['lda', 'lsi', 'w2v']
-n_dims_list = [100, 500, 800]  # A list of n_dims of vectors that the texts are transformed to.
-DG = DataGenerator()
+vec_type_list = ['lda']#, 'lsi', 'w2v']
+n_dims_list = [100]#, 500, 800]  # A list of n_dims of vectors that the texts are transformed to.
+data_gen_opr = {
+    'construct_ts_data': 1,
+}
+
+
+# mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
+#                        '2011-10-01', '2017-10-01', '%Y-%m-%d', 24 * 3600)
+mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
+                       '2011-10-01', '2017-10-01', '%Y-%m-%d', 24*3600)
+DG = DataGenerator(mblog_info)
+if data_gen_opr['construct_ts_data'] == 1:
+    mblog_info.timeStep = [24*3600*5, 24*3600*2]
+    mblog_info.startTime = '2017-09-30'
+    mblog_info.endTime = '2011-10-01'
+    DG = DataGenerator(mblog_info)
+    DG.construct_time_series_data()
+
+
 TP = TextProcessor()
 
 # Perform tf-idf
@@ -98,7 +116,7 @@ def load_seq():
     if sequences is None:
         logger.info('Loading sequences...')
         sequences = np.loadtxt(
-            conf.get_data_filename_via_template('seq', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES), delimiter=',')
+            conf.get_filename_via_tpl('seq', n_users=conf.N_USERS, n_samples=conf.N_SAMPLES), delimiter=',')
 if seq_methods.get('mnr', 0) != 0:
     load_seq()
     logger.info('Performing MNR...')
@@ -115,7 +133,7 @@ if seq_methods.get('cse', 0) != 0:
 
 # Infer causality from text.
 text_methods = {
-    'te': 1,
+    'te': 0,
     'cse': 0
 }
 
@@ -134,6 +152,7 @@ def load_vec(vec_type, n_dims=conf.N_DIMS):
     for i in range(conf.N_USERS):
         data.append(corpus_vec[i * conf.N_SAMPLES: (i + 1) * conf.N_SAMPLES])
     data = np.array(data, dtype=np.float)
+    return data
 
 
 if text_methods.get('te', 0) != 0:
@@ -141,10 +160,21 @@ if text_methods.get('te', 0) != 0:
         for n_dims in n_dims_list:
             try:
                 load_vec(vec_type, n_dims=n_dims)
-                cn, te_result = te_transform(data, vec_type, n_dims)
-                print(te_result)
+                # cn, te_result = te_transform(data, vec_type, n_dims)
+                # print(te_result)
+
+                try:
+                    # Regression
+                    RM = RegressionMethod()
+                    RM.granger_causality(data[:2])
+                except MemoryError as e:
+                    traceback.print_exc()
+                    logger.error(conf.get_memory_state())
             except Exception as e:
                 logger.error(e)
+
+
+
 
 
 

@@ -26,9 +26,10 @@ END_TIME = datetime.strptime('2017-09-30 23:59:59', TIME_FORMAT)
 
 # Params
 N_USERS = 10
-TIME_STEP = 3600 * 24
+# TIME_STEP = 3600 * 24
 N_SAMPLES = 2192
 N_DIMS = 500
+
 
 # Data directories
 ROOT = sys.path[1] if os.name == 'posix' else sys.path[0]
@@ -56,7 +57,7 @@ def get_absolute_path(dir_type="root"):
     }.get(dir_type, PRJ_ROOT)
 
 
-def get_data_filename_via_template(file_type, **kwargs):
+def get_filename_via_tpl(file_type, **kwargs):
     if not isinstance(file_type, str):
         logger.error('A string for "file_type" is required. Got a(n) %s object instead. ' % type(file_type))
     file_type = file_type.lower()
@@ -90,9 +91,9 @@ def get_data_filename_via_template(file_type, **kwargs):
     model_path = MODEL_PATH_TPL.format(
         model_type=model_type, n_users=n_users, n_samples=n_samples, n_dims=n_dims, model_filename=model_filename)
 
-    if file_type in ['seq', 'uid', 'text']:
+    if file_type in ['seq', 'uid']:
         filename = DATA_DIR + filename
-    elif file_type in ['lsi', 'tfidf', 'lda', 'w2v']:
+    elif file_type in ['lsi', 'tfidf', 'lda', 'w2v', 'text']:
         filename = DATA_DIR + file_type + '/' + filename
     elif file_type == 'model':
         filename = get_absolute_path('model') + model_path
@@ -140,8 +141,8 @@ def delete_var(v):
 
 
 if __name__ == "__main__":
-    # print(get_data_filename_via_template('tfidf', n_user=12, n_dims=10, n_samples=2589))
-    print(get_data_filename_via_template(
+    # print(get_filename_via_tpl('tfidf', n_user=12, n_dims=10, n_samples=2589))
+    print(get_filename_via_tpl(
             'tfidf',
             model_type='lsi',
             n_users=N_USERS,
