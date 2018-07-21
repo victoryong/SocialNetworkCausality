@@ -39,38 +39,14 @@ import os
 #         count += 1
 # print(count)
 
-# import matplotlib.pyplot as plt
-# seq = np.loadtxt(conf.get_filename_via_tpl('seq', n_users=10, n_samples=2192), delimiter=',')
-# print(seq)
-# print(seq.shape)
-#
-# hist = seq.sum(0)
-# # print(hist.shape)
-# x = np.array(range(1, 2193))
-# # hist = np.array(hist).reshape((2192, 1))
-# # histogram = np.histogram2d(x, hist)
-#
-# plt.bar(x, hist, 1.)
-# plt.show()2047790442
-import sys
-csv.field_size_limit(sys.maxsize)
-with open(conf.get_filename_via_tpl('text', user_id=2263978304, n_samples=626)) as fp:
-    # lines = fp.readlines()
-    # print(len(lines))
-    csv_reader = csv.reader(fp)
-    idx = 0
-    t = []
-    for i in csv_reader:
-        if len(i) and i[0] == '':
-            t.append([])
-            print([])
-        else:
-            # t.append(i)
-            print(i)
-        idx += 1
-        if idx > 410:
-            break
+import matplotlib.pyplot as plt
 
-    for j in range(419, 423):
-        print(j, len(lines[j]))
-# print(idx, csv.field_size_limit())
+a = np.array([[1,2],
+          [2,3]])
+c = str(a)
+print(c)
+print(type(c))
+import csv
+with open('test.csv', 'a') as fp:
+    csv_writer = csv.writer(fp)
+    csv_writer.writerow([c])

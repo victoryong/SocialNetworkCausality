@@ -250,7 +250,8 @@ def _test():
 
 if __name__ == '__main__':
     # data_info = {'n_users': 12, 'n_samples': 2192, 'n_dims': 100}
-    data_info = {'n_users': 12, 'n_samples': 626, 'n_dims': 100}
+    # data_info = {'n_users': 12, 'n_samples': 626, 'n_dims': 100}
+    data_info = {'n_users': 12, 'n_samples': 2049, 'n_dims': 100}
 
     # use the dict of data info defined above.
     data = recover_text_list(data_info['n_users'], data_info['n_samples'])

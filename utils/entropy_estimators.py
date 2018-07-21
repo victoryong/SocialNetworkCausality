@@ -12,6 +12,7 @@ import random
 
 # CONTINUOUS ESTIMATORS
 
+
 def entropy(x, k=3, base=2):
     """ The classic K-L k-nearest neighbor continuous entropy estimator
         x should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]
@@ -107,6 +108,69 @@ def kldiv(x, xp, k=3, base=2):
 
 
 # DISCRETE ESTIMATORS
+
+
+def transfer_entropyd(sample, max_lag=1, resample_time=100):
+    """
+    function of TE
+    """
+    sample = np.array(sample)
+    n_nodes, n_samples = sample.shape[0], sample.shape[1]
+
+    length = n_samples - max_lag - 1
+    lag_max_pre = np.eye(n_nodes, dtype=int)
+    lag_max_late = np.zeros((n_nodes, n_nodes), dtype=np.int)
+    lag_te = np.zeros((n_nodes, n_nodes))
+
+    for i in range(n_nodes):
+        for j in range(i, n_nodes):
+            if i == j:
+                i_p, i_p2, i_f = sample[i, max_lag:-1], sample[i, max_lag+1:], sample[i, :-max_lag-1]
+                te_ii = cmidd(i_f, i_p2, i_p)
+
+                lag_te[i, j] = te_ii
+                # te_ii2 = np.array([cmidd(i_f, random.sample(i_p2.tolist(), length), i_p) for m in range(resample_time)])
+                # if len(te_ii2[te_ii2 > te_ii])/100.00 < 0.01:
+                #     # lag_max_late[j, i] += 1
+                #     # lag_max_pre[j, i] += 1
+                #     lag_te[i, j] = te_ii
+            else:
+                i_p, i_f, j_p, j_f = sample[i, max_lag:], sample[i, :-max_lag], sample[j, max_lag:], sample[j, :-max_lag]
+                
+                # information transfer from node_i to node_j
+                te_ij = cmidd(i_p, j_f, j_p)
+
+                lag_te[i, j] = te_ij
+                # te_ij2 = np.array([cmidd(j_f, random.sample(i_p.tolist(), length), j_p) for m in range(resample_time)])
+                # if len(te_ij2[te_ij2 > te_ij])/100.00 < 0.01:
+                #     # lag_max_late[j, i] += 1
+                #     # lag_max_pre[j, i] += 1
+                #     lag_te[i, j] = te_ij
+                #
+                # # information transfer from node_j to node_i
+                te_ji = cmidd(j_p, i_f, i_p)
+
+                lag_te[j, i] = te_ji
+                # te_ji2 = np.array([cmidd(i_f, random.sample(j_p.tolist(), length), i_p) for m in range(resample_time)])
+                # if len(te_ji2[te_ji2 > te_ji]) / 100.00 < 0.01:
+                #     # lag_max_late[j, i] += 1
+                #     # lag_max_pre[j, i] += 1
+                #     lag_te[j, i] = te_ji
+
+    # prune
+    # for i in range(n_nodes):
+    #     for j in range(n_nodes):
+    #         if i != j:
+    #             if lag_te[i,j] >= lag_te[j,i]:
+    #                 lag_max_late[j,i] = 0
+    # 
+    #             elif lag_te[j,i]:
+    #                 lag_max_late[i,j] = 0
+    #         else:
+    #             break
+    # return lag_max_pre,lag_max_late,lag_te
+    return lag_te
+
 def entropyd(sx, base=2):
     """ Discrete entropy estimator
         Given a list of samples which can be any hashable object

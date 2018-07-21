@@ -391,8 +391,8 @@ class DataGenerator:
         self.save_sequences()
 
     def save_sequences(self):
-        uid_fname = conf.get_filename_via_tpl('uid', n_users=len(self.uidList), n_samples=mblog_info.seqLen)
-        seq_fname = conf.get_filename_via_tpl('seq', n_users=len(self.uidList), n_samples=mblog_info.seqLen)
+        uid_fname = conf.get_filename_via_tpl('uid', n_users=len(self.uidList), n_samples=self.mblogInfo.seqLen)
+        seq_fname = conf.get_filename_via_tpl('seq', n_users=len(self.uidList), n_samples=self.mblogInfo.seqLen)
         # Save user ids
         with open(uid_fname, 'w') as fp:
             csv_writer = csv.writer(fp)

@@ -45,12 +45,12 @@ def te_transform(data, vec_type, n_dims=conf.N_DIMS, lag=1):
             sample_i_p = sample_i[lag:]
             sample_i_f = sample_i[:-lag]
             sample_j_p = sample_j[lag:]
-            te_i_j = cmi(sample_i_f, sample_j_p, sample_i_p)
-            te_mat[i][j] = te_i_j
+            te_j_i = cmi(sample_i_f, sample_j_p, sample_i_p)
+            te_mat[j][i] = te_j_i
             if i != j:
                 sample_j_f = sample_j[:-lag]
-                te_j_i = cmi(sample_j_f, sample_i_p, sample_j_p)
-                te_mat[j][i] = te_j_i
+                te_i_j = cmi(sample_j_f, sample_i_p, sample_j_p)
+                te_mat[i][j] = te_i_j
     te_path = conf.get_filename_via_tpl(
         'te_' + vec_type, n_users=n_nodes, n_samples=conf.N_SAMPLES, n_dims=n_dims, lag=lag)
     np.savetxt(te_path, te_mat, delimiter=',', fmt='%f')
