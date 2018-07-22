@@ -17,7 +17,7 @@ while len(times_steps) < original_seq.shape[1]:
             temp_steps = [i] + list(times_steps)
             temp_steps.sort()
 
-            obj, h_seq, te_mat, complexity = mo.cal_object_function(original_seq, temp_steps, return_details=True)
+            obj, h_seq, te_mat, complexity = mo.cal_object_function(original_seq, temp_steps, lamb=.05, return_details=True)
             line = [temp_steps, obj, h_seq, te_mat, complexity]
             line = [str(i) for i in line]
 
@@ -32,7 +32,7 @@ while len(times_steps) < original_seq.shape[1]:
 
     print(max_obj, max_idx)
 
-with open('search_timesteps_results_no_permutationtest.csv', 'a', newline='') as fp:
+with open('search_timesteps_results_no_permutationtest.csv', 'w', newline='') as fp:
     csv_writer = csv.writer(fp)
     csv_writer.writerows(results)
 

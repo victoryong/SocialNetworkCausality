@@ -64,7 +64,8 @@ def cal_object_function(seq, time_steps, lamb=0, return_details=False):
     te_mat = ee.transfer_entropyd(new_seq)
     it = te_mat.sum()
     # Model complexity
-    complexity = len(time_steps)
+    l = len(time_steps)
+    complexity = l if l < seq.shape[1] / 2 else seq.shape[1] - l
 
     return h_seq + it + lamb * complexity, h_seq, te_mat, complexity if return_details else h_seq + it + lamb * complexity
 

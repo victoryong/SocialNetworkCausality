@@ -112,7 +112,7 @@ def kldiv(x, xp, k=3, base=2):
 
 def transfer_entropyd(sample, max_lag=1, resample_time=100):
     """
-    function of TE
+    function of TE for discrete data.
     """
     sample = np.array(sample)
     n_nodes, n_samples = sample.shape[0], sample.shape[1]
