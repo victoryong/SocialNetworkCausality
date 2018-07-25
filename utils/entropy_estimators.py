@@ -128,7 +128,8 @@ def transfer_entropyd(sample, max_lag=1, resample_time=100):
                 i_p, i_p2, i_f = sample[i, max_lag:-1], sample[i, max_lag+1:], sample[i, :-max_lag-1]
                 te_ii = cmidd(i_f, i_p2, i_p)
 
-                lag_te[i, j] = te_ii
+                # lag_te[i, j] = te_ii
+
                 # te_ii2 = np.array([cmidd(i_f, random.sample(i_p2.tolist(), length), i_p) for m in range(resample_time)])
                 # if len(te_ii2[te_ii2 > te_ii])/100.00 < 0.01:
                 #     # lag_max_late[j, i] += 1

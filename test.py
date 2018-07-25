@@ -38,15 +38,45 @@ import os
 #     if np.sum(i, axis=0) == 0.:
 #         count += 1
 # print(count)
+# np.set_printoptions(threshold=np.inf)
+# original_seq = np.loadtxt(conf.get_filename_via_tpl('seq', n_users=12, n_samples=2192), delimiter=',')
+# print(original_seq.shape)
+#
+# for i in original_seq:
+#     print(i)
+#
+# # from model_object import make_seq_via_time_steps
+# # s = make_seq_via_time_steps(original_seq, [2,4,8,2192])
+# # print(s)
+# print(original_seq[:, 0])
+# print(original_seq[:, 1])
+# print(original_seq[:, 0] | original_seq[:, 1])
+# original_seq[:, 0] = original_seq[:, 0] | original_seq[:, 1]
+# print(original_seq[:, 0])
 
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
+res = []
+with open('search_timesteps_results_inner_pro.csv', 'r', newline='') as fp:
+    csv_reader = csv.reader(fp)
+    for i in csv_reader:
+        res.append(i)
 
-a = np.array([[1,2],
-          [2,3]])
-c = str(a)
-print(c)
-print(type(c))
-import csv
-with open('test.csv', 'a') as fp:
-    csv_writer = csv.writer(fp)
-    csv_writer.writerow([c])
+res = np.array(res[1:])
+objs = res[:, 1]
+
+lens = res[:, -1]
+lens = np.sort(lens)
+
+hseqs= res[:, 2]
+its = res[:, 3]
+
+
+plt.plot(lens, objs)
+
+plt.show()
+
+print(objs)
+print(lens)
+print(hseqs)
+
+

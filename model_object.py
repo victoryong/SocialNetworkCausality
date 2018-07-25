@@ -38,6 +38,7 @@ def make_seq_via_time_steps(seq, time_steps):
         else:
             for r in range(seq.shape[0]):
                 new_seq[r, nidx] = sum(seq[r, oidx: oidx+step])
+            new_seq[new_seq[:, nidx] > 0, nidx] = 1
         oidx += step
         nidx += 1
     if nidx != len(time_steps):
@@ -65,9 +66,9 @@ def cal_object_function(seq, time_steps, lamb=0, return_details=False):
     it = te_mat.sum()
     # Model complexity
     l = len(time_steps)
-    complexity = l if l < seq.shape[1] / 2 else seq.shape[1] - l
-
-    return h_seq + it + lamb * complexity, h_seq, te_mat, complexity if return_details else h_seq + it + lamb * complexity
+    # complexity = l if l < seq.shape[1] / 2 else seq.shape[1] - l
+    complexity = l
+    return h_seq + it + lamb * complexity, h_seq, it, te_mat, complexity if return_details else h_seq + it + lamb * complexity
 
 
 
