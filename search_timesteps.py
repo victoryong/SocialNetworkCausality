@@ -14,32 +14,33 @@ print(original_seq.shape)
 
 # Enumerate
 #
-# times_steps = {original_seq.shape[1]}
-results = [['time_steps', 'obj_func', 'h_seq', 'it', 'te_mat', 'len']]
-# while len(times_steps) < original_seq.shape[1]:
-#     max_obj = max_idx = -1
-#     max_line = None
-#
-#     for i in range(1, original_seq.shape[1]):
-#         if i not in times_steps:
-#             temp_steps = [i] + list(times_steps)
-#             temp_steps.sort()
-#
-#             obj, h_seq, te_mat, complexity = mo.cal_object_function(original_seq, temp_steps, lamb=.05, return_details=True)
-#
-#             if obj > max_obj:
-#                 max_obj = obj
-#                 max_idx = i
-#                 max_line = [temp_steps, obj, h_seq, te_mat, complexity]
-#                 max_line = [str(i) for i in max_line]
-#
-#     results.append(max_line)
-#     times_steps.add(max_idx)
-#     print(max_obj, max_idx)
-#
-# with open('search_timesteps_results_no_permutationtest.csv', 'w', newline='') as fp:
-#     csv_writer = csv.writer(fp)
-#     csv_writer.writerows(results)
+times_steps = {original_seq.shape[1]}
+results = [['obj_func', 'h_seq', 'it', 'complexity']]
+while len(times_steps) < original_seq.shape[1]:
+    max_obj = max_idx = -1
+    max_line = None
+
+    for i in range(1, original_seq.shape[1]):
+        if i not in times_steps:
+            temp_steps = [i] + list(times_steps)
+            temp_steps.sort()
+
+            obj, h_seq, it, te_mat, complexity = mo.cal_object_function(original_seq, temp_steps, lamb=.05, return_details=True)
+
+            if obj > max_obj:
+                max_obj = obj
+                max_idx = i
+                # max_line = [temp_steps, obj, h_seq, te_mat, complexity]
+                max_line = [obj, h_seq, it, complexity]
+                max_line = [str(i) for i in max_line]
+
+    results.append(max_line)
+    times_steps.add(max_idx)
+    print(max_obj, max_idx)
+
+with open('search_timesteps_results_no_permutationtest.csv', 'w', newline='') as fp:
+    csv_writer = csv.writer(fp)
+    csv_writer.writerows(results)
 
 np.set_printoptions(threshold=np.inf)
 
@@ -99,10 +100,9 @@ def segment_ts():
 
 # segment_ts()
 
-
-[results.append([ts] + list(mo.cal_object_function(original_seq, ts, return_details=True))) for ts in segment_ts()]
-with open('search_timesteps_results_inner_pro.csv', 'w', newline='') as fp:
-    csv_writer = csv.writer(fp)
-    csv_writer.writerows(results)
+# [results.append([ts] + list(mo.cal_object_function(original_seq, ts, return_details=True))) for ts in segment_ts()]
+# with open('search_timesteps_results_inner_pro.csv', 'w', newline='') as fp:
+#     csv_writer = csv.writer(fp)
+#     csv_writer.writerows(results)
 
 
