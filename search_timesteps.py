@@ -48,7 +48,7 @@ def segment_ts_enum():
         csv_writer.writerows(results)
 
 
-def segment_ts_inner_pro():
+def segment_ts_inner_pro(thres_low=1, thres_high=n_users+1):
     """
     Segment time series using a bottom-up method, and its costs are calculated as inner products of every two neighbor time points.
     """
@@ -61,7 +61,7 @@ def segment_ts_inner_pro():
         costs[i] = np.dot(seq[:, i], seq[:, i + 1])
 
     # n_users = 2
-    for nu in range(1, n_users+1):
+    for nu in range(thres_low, thres_high):
         cost_thres = nu
         # cost_thres = 6
 
@@ -94,7 +94,7 @@ def segment_ts_inner_pro():
             min_cost = min(costs)
 
         # print(costs)
-        # print(len(costs))
+        print(len(costs))
 
         # print(time_steps)
         # print(len(time_steps))

@@ -392,9 +392,61 @@ class DataGenerator:
         # print self.uidList
         self.save_sequences()
 
-    def save_sequences(self):
-        uid_fname = conf.get_filename_via_tpl('uid', n_users=len(self.uidList), n_samples=self.mblogInfo.seqLen)
-        seq_fname = conf.get_filename_via_tpl('seq', n_users=len(self.uidList), n_samples=self.mblogInfo.seqLen)
+    def construct_with_diff_ts(self, new_mblog_info):
+        n_users, n_samples = 12, 2192
+        uid_list = np.loadtxt(conf.get_filename_via_tpl('uid', n_users=n_users, n_samples=n_samples), delimiter=',', dtype=np.int)
+        original_seq = np.loadtxt(conf.get_filename_via_tpl('seq', n_users=n_users, n_samples=n_samples), delimiter=',', dtype=np.int)
+        original_text_list = []
+        for uid in uid_list:
+            with open(conf.get_filename_via_tpl('text', user_id=uid, n_samples=n_samples), encoding='utf-8') as fp:
+                csv_reader = csv.reader(fp)
+                text = [line[0].strip() if len(line) > 0 else '' for line in csv_reader]
+                original_text_list.append(text)
+                assert len(text) == 2192, 'Texts of user %d are not enough. ' % uid
+
+        time_steps = new_mblog_info.timeStep
+        if n_samples == len(new_mblog_info.timeStep):
+            return original_seq, original_text_list
+
+        new_seq = np.zeros((original_seq.shape[0], len(time_steps)), np.int)
+        new_text_list = [[''] * len(time_steps)] * original_seq.shape[0]
+
+        nidx = oidx = 0
+        for time_point in time_steps:
+            step = int(time_point / (24 * 3600) - oidx)
+            # if step == 1:
+            #     new_seq[:, nidx] = original_seq[:, oidx]
+            #     new_text_list[:, nidx] = original_text_list[:, oidx]
+            # else:
+            for r in range(original_seq.shape[0]):
+                new_seq[r, nidx] = sum(original_seq[r, oidx: oidx + step])
+                new_text_list[r][nidx] = original_text_list[r][oidx]
+                for c in range(1, step):
+                    new_text_list[r][nidx] = new_text_list[r][nidx] + ' ' + original_text_list[r][oidx + c]
+                    # print(original_text_list[r][oidx + c])
+            new_seq[new_seq[:, nidx] > 0, nidx] = 1
+
+            oidx += step
+            nidx += 1
+        assert nidx == len(time_steps), 'nidx != len(time_steps)'
+        assert oidx == original_seq.shape[1], 'Total amount of time steps is smaller than sample length.'
+
+        self.uidList = uid_list
+        self.sequences = new_seq
+        self.save_sequences(new_mblog_info)
+
+        for uid, texts in zip(uid_list, new_text_list):
+            with open(conf.get_filename_via_tpl('text', user_id=uid, n_samples=new_mblog_info.seqLen), 'w') as fp:
+                csv_writer = csv.writer(fp)
+                for row in texts:
+                    csv_writer.writerow([row])
+
+        return new_seq, new_text_list
+
+    def save_sequences(self, new_mblog_info=None):
+        mblog_info = new_mblog_info if new_mblog_info else self.mblogInfo
+        uid_fname = conf.get_filename_via_tpl('uid', n_users=len(self.uidList), n_samples=mblog_info.seqLen)
+        seq_fname = conf.get_filename_via_tpl('seq', n_users=len(self.uidList), n_samples=mblog_info.seqLen)
         # Save user ids
         with open(uid_fname, 'w') as fp:
             csv_writer = csv.writer(fp)
@@ -440,19 +492,29 @@ def recover_text_list(n_users, n_samples, debug=False):
 
 if __name__ == '__main__':
     # Segment data with a constant time step 1 day which is also the smallest duration.
-    # mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
-    #                        '2011-10-01', '2017-10-01', '%Y-%m-%d', 24*3600)
+    mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
+                           '2011-10-01', '2017-10-01', '%Y-%m-%d', 24*3600)
+    DG = DataGenerator(mblog_info)
 
     # get_data_from_mongodb(host='10.21.50.32')
     # find_top_ten_mblogs()uid_list=[2263978304, 2846253732, 5032225033, 5213225423]
     # find_default_user_mblogs()
 
-    ts_search_result = segment_ts_inner_pro()[1:]
-    for ts in ts_search_result:
-        mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
-                               '2011-10-01', '2017-09-30', '%Y-%m-%d', ts[0].tolist())
+    # First time construct ts data.
+    # DG.construct_time_series_data()
 
-        DG = DataGenerator(mblog_info)
-        DG.construct_time_series_data()
+    ts_search_result = segment_ts_inner_pro()[1:]
+    ts_search_result = np.array(ts_search_result)
+
+    last_len = -1
+    for ts in ts_search_result:
+        new_mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
+                                   '2011-10-01', '2017-09-30', '%Y-%m-%d', (24 * 3600 * ts[0]).tolist())
+        print(len(ts[0]))
+        if last_len == len(ts[0]):
+            continue
+        last_len = len(ts[0])
+        DG.construct_with_diff_ts(new_mblog_info)
+
     # DG.recover_text_list(True)
 

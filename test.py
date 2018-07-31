@@ -78,3 +78,7 @@ import os
 # print(objs)
 # print(lens)
 # print(hseqs)
+original_seq = np.loadtxt(conf.get_filename_via_tpl('seq', n_users=12, n_samples=2192), delimiter=',')
+original_seq = original_seq.astype(int)
+print(original_seq)
+np.savetxt(conf.get_filename_via_tpl('seq', n_users=12, n_samples=2192), original_seq, fmt='%d',delimiter=',')
