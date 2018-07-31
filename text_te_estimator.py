@@ -116,6 +116,11 @@ def evaluate(n_users, n_samples, n_dims):
 
     print('\n\n')
 
+
+def calculate_text_te():
+
+
+
 if __name__ == '__main__':
     # task: 0 -- infer; 1 -- evaluate;
     # task = 0

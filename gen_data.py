@@ -19,6 +19,7 @@ import pymongo
 import utils.config_util as conf
 from utils.log import get_console_logger
 from words_segmentation import tokenize
+from search_timesteps import segment_ts_inner_pro
 
 logger = get_console_logger(__name__)
 
@@ -305,11 +306,12 @@ class MblogInfo:
             mblog_type, db_host, db_port, db_name, coll_name, pd_names, \
             datetime.strptime(start_time, time_format), datetime.strptime(end_time, time_format), time_format
         if isinstance(time_step, list):
-            self.timeStep = []
-            time_sum = 0
-            for i in range(len(time_step)):
-                time_sum += time_step[i]
-                self.timeStep.append(time_sum)
+            # self.timeStep = []
+            # time_sum = 0
+            # for i in range(len(time_step)):
+            #     time_sum += time_step[i]
+            #     self.timeStep.append(time_sum)
+            self.timeStep = time_step
 
             total_seconds = (self.endTime - self.startTime).total_seconds()
             l = int(total_seconds / self.timeStep[-1])
@@ -343,7 +345,7 @@ class DataGenerator:
                         return index * steps_count + i
                 return (index + 1) * steps_count
 
-        with open(conf.get_absolute_path('data') + 'default_users.txt') as fp:
+        with open(conf.get_absolute_path('data') + 'default_users.txt', encoding='utf-8') as fp:
             lines = fp.readlines()
 
         user_mblogs_dir = conf.get_absolute_path('data') + 'user_mblogs/'
@@ -437,17 +439,20 @@ def recover_text_list(n_users, n_samples, debug=False):
 
 
 if __name__ == '__main__':
-    mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
-                           '2011-10-01', '2017-10-01', '%Y-%m-%d', 24*3600)
+    # Segment data with a constant time step 1 day which is also the smallest duration.
+    # mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
+    #                        '2011-10-01', '2017-10-01', '%Y-%m-%d', 24*3600)
 
     # get_data_from_mongodb(host='10.21.50.32')
     # find_top_ten_mblogs()uid_list=[2263978304, 2846253732, 5032225033, 5213225423]
     # find_default_user_mblogs()
 
-    mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
-                           '2011-10-01', '2017-09-30', '%Y-%m-%d', [i * 24*3600 for i in [5, 2]])
+    ts_search_result = segment_ts_inner_pro()[1:]
+    for ts in ts_search_result:
+        mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
+                               '2011-10-01', '2017-09-30', '%Y-%m-%d', ts[0].tolist())
 
-    DG = DataGenerator(mblog_info)
-    DG.construct_time_series_data()
+        DG = DataGenerator(mblog_info)
+        DG.construct_time_series_data()
     # DG.recover_text_list(True)
 

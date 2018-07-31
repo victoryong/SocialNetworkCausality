@@ -13,6 +13,34 @@ import random
 # CONTINUOUS ESTIMATORS
 
 
+def transfer_entropy(sample, max_lag=1, resample_time=100, self_trans=False):
+    sample = np.array(sample)
+    sample_shape = sample.shape
+
+    assert 1 < len(sample_shape) < 4, "Sample should be a 2d or 3d matrix."
+
+    n_nodes, n_samples = sample.shape[0], sample.shape[1]
+    lag_te = np.zeros((n_nodes, n_nodes))
+
+    for i in range(n_nodes):
+        for j in range(i, n_nodes):
+            if i == j and self_trans:
+                i_p, i_p2, i_f = sample[i, max_lag:-1], sample[i, max_lag + 1:], sample[i, :-max_lag - 1]
+                te_ii = cmidd(i_f, i_p2, i_p)
+                lag_te[i, j] = te_ii
+            elif i != j:
+                i_p, i_f, j_p, j_f = sample[i, max_lag:], sample[i, :-max_lag], sample[j, max_lag:], sample[j,
+                                                                                                     :-max_lag]
+                # information transfer from node_i to node_j
+                te_ij = cmidd(i_p, j_f, j_p)
+                lag_te[i, j] = te_ij
+                # # information transfer from node_j to node_i
+                te_ji = cmidd(j_p, i_f, i_p)
+                lag_te[j, i] = te_ji
+
+    return lag_te
+
+
 def entropy(x, k=3, base=2):
     """ The classic K-L k-nearest neighbor continuous entropy estimator
         x should be a list of vectors, e.g. x = [[1.3], [3.7], [5.1], [2.4]]

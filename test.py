@@ -54,29 +54,27 @@ import os
 # original_seq[:, 0] = original_seq[:, 0] | original_seq[:, 1]
 # print(original_seq[:, 0])
 
-from matplotlib import pyplot as plt
-res = []
-with open('search_timesteps_results_inner_pro.csv', 'r', newline='') as fp:
-    csv_reader = csv.reader(fp)
-    for i in csv_reader:
-        res.append(i)
-
-res = np.array(res[1:])
-objs = res[:, 1]
-
-lens = res[:, -1]
-lens = np.sort(lens)
-
-hseqs= res[:, 2]
-its = res[:, 3]
-
-
-plt.plot(lens, objs)
-
-plt.show()
-
-print(objs)
-print(lens)
-print(hseqs)
-
-
+# from matplotlib import pyplot as plt
+# res = []
+# with open('search_timesteps_results_inner_pro.csv', 'r', newline='') as fp:
+#     csv_reader = csv.reader(fp)
+#     for i in csv_reader:
+#         res.append(i)
+#
+# res = np.array(res[1:])
+# objs = res[:, 1]
+#
+# lens = res[:, -1]
+# lens = np.sort(lens)
+#
+# hseqs= res[:, 2]
+# its = res[:, 3]
+#
+#
+# plt.plot(lens, objs)
+#
+# plt.show()
+#
+# print(objs)
+# print(lens)
+# print(hseqs)
