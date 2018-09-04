@@ -10,9 +10,11 @@ import csv
 
 from sklearn.metrics import roc_curve, auc
 
-from utils.entropy_estimators import cmi
+from utils.entropy_estimators import cmi, cond_entropy, entropy
 import utils.config_util as conf
 from utils.config_util import get_console_logger
+from optimize_obj_func import get_n_samples_list
+from text_processing import TextProcessor
 
 logger = get_console_logger(__name__)
 
@@ -21,19 +23,22 @@ N_SAMPLES = conf.N_SAMPLES
 N_DIMS = conf.N_DIMS
 
 
-def te_transform(data, vec_type, n_dims=conf.N_DIMS, lag=1):
+def calculate_te(data, vec_type, lag=1, normalised=True):
     """
     Perform transfer entropy on each pair of samples to find out causal relationships.
-    :param data: 3d array. Each element is a matrix of samples of a user.
-    :param vec_type: Type of text processing.
-    :param n_dims: Numbers of dimensions.
-    :param lag: Length of lag. Default is 1.
-    :return: Causal network and te matrix.
     """
     data = np.array(data)
-    n_nodes = data.shape[0]
+    n_nodes, n_samples, n_dims = data.shape
     cn = np.zeros((n_nodes, n_nodes))
     te_mat = np.zeros((n_nodes, n_nodes))
+    #
+    if normalised:
+        H_0 = np.zeros(n_nodes)
+        for i in range(n_nodes):
+            max_min = np.max(data[i], 0) - np.min(data[i], 0)
+            H_0[i] = np.sum(np.log2(max_min))
+        # for i in range(n_nodes):
+        #     H_0[i] = entropy(data[i])
 
     logger.info('Calculating te...')
     # Calculate te and fill with the causal network.
@@ -46,13 +51,21 @@ def te_transform(data, vec_type, n_dims=conf.N_DIMS, lag=1):
             sample_i_f = sample_i[:-lag]
             sample_j_p = sample_j[lag:]
             te_j_i = cmi(sample_i_f, sample_j_p, sample_i_p)
+
+            if normalised:
+                te_j_i = te_j_i / (H_0[i] - cond_entropy(sample_i_f, np.concatenate((sample_i_p, sample_j_p), 1)))
+                # te_j_i = te_j_i / H_0[i]
             te_mat[j][i] = te_j_i
+
             if i != j:
                 sample_j_f = sample_j[:-lag]
                 te_i_j = cmi(sample_j_f, sample_i_p, sample_j_p)
+                if normalised:
+                    te_i_j = te_i_j / (H_0[j] - cond_entropy(sample_j_f, np.concatenate((sample_i_p, sample_j_p), 1)))
+                    # te_i_j = te_i_j / H_0[j]
                 te_mat[i][j] = te_i_j
     te_path = conf.get_filename_via_tpl(
-        'te_' + vec_type, n_users=n_nodes, n_samples=conf.N_SAMPLES, n_dims=n_dims, lag=lag)
+        'te_' + vec_type, n_users=n_nodes, n_samples=n_samples, n_dims=n_dims, lag=lag)
     np.savetxt(te_path, te_mat, delimiter=',', fmt='%f')
     logger.info('Te result has been saved in %s. ' % te_path)
     return cn, te_mat
@@ -117,47 +130,63 @@ def evaluate(n_users, n_samples, n_dims):
     print('\n\n')
 
 
-def calculate_text_te():
+def calculate_text_te(n_samples_list=None, normalised=True):
+    n_users, n_dims = 12, 50
+    if not n_samples_list:
+        n_samples_list = get_n_samples_list()
 
+    # n_samples_list = n_samples_list[2:8]
+    print(n_samples_list)
+    for n_samples in n_samples_list:
+        data_info = {'n_users': n_users, 'n_samples': n_samples, 'n_dims': n_dims}
+
+        # use the dict of data info defined above.
+        tp = TextProcessor(data_info['n_users'], data_info['n_samples'], data_info['n_dims'])
+
+        data = tp.load_vec('lda')
+        print(data.shape)
+        cn, te_mat = calculate_te(data, 'lda', normalised=normalised)
+        print('te_lda_%d_%d_%d' % (data_info['n_users'], data_info['n_samples'], data_info['n_dims']))
+        print(cn)
+        print(te_mat)
 
 
 if __name__ == '__main__':
-    # task: 0 -- infer; 1 -- evaluate;
-    # task = 0
-    task = 1
+    # # task: 0 -- infer; 1 -- evaluate;
+    # # task = 0
+    # task = 1
+    #
+    # if task == 1:
+    #     dims = [100]
+    #     for n_dims in dims:
+    #         evaluate(N_USERS, N_SAMPLES, n_dims)
+    #     exit(0)
+    #
+    # data = []
+    # idx = 0
+    # with open(conf.get_filename_via_tpl('w2v', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS)) as fp:
+    #     csv_reader = csv.reader(fp)
+    #     samples = np.zeros((N_SAMPLES, N_DIMS))
+    #     for line in csv_reader:
+    #         if len(line):
+    #             if len(line) < N_DIMS:
+    #                 line = np.array(line.extend([0.0]*(N_DIMS - len(line))))
+    #             samples[idx] = line
+    #
+    #         idx += 1
+    #         if idx == N_SAMPLES:
+    #             data.append(samples)
+    #             samples = np.zeros((N_SAMPLES, N_DIMS))
+    #             idx = 0
+    #
+    # data = np.array(data)
+    # print(data.shape)
+    #
+    # causal_network, te_matrix = calculate_te(data)
+    # with open(conf.get_filename_via_tpl('te', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS), 'w') as fp:
+    #     csv_writer = csv.writer(fp)
+    #     csv_writer.writerows(te_matrix)
+    #     logger.info(conf.get_filename_via_tpl('te', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS) + ' saved.')
 
-    if task == 1:
-        dims = [100]
-        for n_dims in dims:
-            evaluate(N_USERS, N_SAMPLES, n_dims)
-        exit(0)
-
-    data = []
-    idx = 0
-    with open(conf.get_filename_via_tpl('w2v', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS)) as fp:
-        csv_reader = csv.reader(fp)
-        samples = np.zeros((N_SAMPLES, N_DIMS))
-        for line in csv_reader:
-            if len(line):
-                if len(line) < N_DIMS:
-                    line = np.array(line.extend([0.0]*(N_DIMS - len(line))))
-                samples[idx] = line
-
-            idx += 1
-            if idx == N_SAMPLES:
-                data.append(samples)
-                samples = np.zeros((N_SAMPLES, N_DIMS))
-                idx = 0
-
-    data = np.array(data)
-    print(data.shape)
-
-    causal_network, te_matrix = te_transform(data)
-    with open(conf.get_filename_via_tpl('te', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS), 'w') as fp:
-        csv_writer = csv.writer(fp)
-        csv_writer.writerows(te_matrix)
-        logger.info(conf.get_filename_via_tpl('te', n_users=N_USERS, n_samples=N_SAMPLES, n_dims=N_DIMS) + ' saved.')
-
-
-
+    calculate_text_te([2192, 2166, 1411])
 

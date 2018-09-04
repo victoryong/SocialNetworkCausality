@@ -25,10 +25,10 @@ START_TIME = datetime.strptime('2011-09-30 23:59:59', TIME_FORMAT)
 END_TIME = datetime.strptime('2017-09-30 23:59:59', TIME_FORMAT)
 
 # Params
-N_USERS = 10
+N_USERS = 12
 # TIME_STEP = 3600 * 24
 N_SAMPLES = 2192
-N_DIMS = 500
+N_DIMS = 100
 
 
 # Data directories

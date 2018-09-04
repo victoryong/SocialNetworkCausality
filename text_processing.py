@@ -20,6 +20,7 @@ from gensim import corpora, matutils
 import utils.config_util as conf
 from utils.log import get_console_logger
 from gen_data import recover_text_list
+from optimize_obj_func import get_n_samples_list
 
 logger = get_console_logger(__name__)
 
@@ -224,6 +225,17 @@ class TextProcessor:
     def corpus2dense(corpus, n_terms, n_docs=conf.N_SAMPLES, dtype=np.float):
         return matutils.corpus2dense(corpus, n_terms, n_docs, dtype).T
 
+    def load_vec(self, vec_type):
+        logger.info('Loading %s vectors...' % vec_type)
+        try:
+            corpus_vec = self.load_corpus(vec_type, True)
+        except Exception as e:
+            raise e
+        data = []
+        for i in range(self.nUsers):
+            data.append(corpus_vec[i * self.nSamples: (i + 1) * self.nSamples])
+        data = np.array(data, dtype=np.float)
+        return data
 
 def _test():
     tp = TextProcessor(10, 2192, 100)
@@ -249,18 +261,20 @@ def _test():
     tp.w2v_transform([['你好啊', 'hell0'], ['123', 'forfor']])
 
 if __name__ == '__main__':
-    # data_info = {'n_users': 12, 'n_samples': 2192, 'n_dims': 100}
-    # data_info = {'n_users': 12, 'n_samples': 626, 'n_dims': 100}
-    data_info = {'n_users': 12, 'n_samples': 2049, 'n_dims': 100}
+    n_users = 12
+    n_samples_list = get_n_samples_list()
 
-    # use the dict of data info defined above.
-    data = recover_text_list(data_info['n_users'], data_info['n_samples'])
-    tp = TextProcessor(data_info['n_users'], data_info['n_samples'], data_info['n_dims'])
+    for n_samples in n_samples_list:
+        data_info = {'n_users': n_users, 'n_samples': n_samples, 'n_dims': 50}
 
-    tfidf_corpus = tp.tf_idf_transform(data)
-    lsi_corpus = tp.lsi_transform(tfidf_corpus)
-    lda_corpus = tp.lda_transform(tfidf_corpus)
-    w2v_corpus = tp.w2v_transform(data)
+        # use the dict of data info defined above.
+        data = recover_text_list(data_info['n_users'], data_info['n_samples'])
+        tp = TextProcessor(data_info['n_users'], data_info['n_samples'], data_info['n_dims'])
+
+        tfidf_corpus = tp.tf_idf_transform(data)
+        # lsi_corpus = tp.lsi_transform(tfidf_corpus)
+        lda_corpus = tp.lda_transform(tfidf_corpus)
+        # w2v_corpus = tp.w2v_transform(data)
 
     # _test()
 

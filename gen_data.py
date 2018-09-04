@@ -9,17 +9,17 @@ Read data files and generate input data in the form that is needed below.
 
 import csv
 import gc
-import sys
 import re
+import sys
 from datetime import datetime, timedelta
 
 import numpy as np
 import pymongo
 
 import utils.config_util as conf
+from optimize_obj_func import segment_ts_bottom_up
 from utils.log import get_console_logger
-from words_segmentation import tokenize
-from search_timesteps import segment_ts_inner_pro
+from utils.words_segmentation import tokenize
 
 logger = get_console_logger(__name__)
 
@@ -413,7 +413,7 @@ class DataGenerator:
 
         nidx = oidx = 0
         for time_point in time_steps:
-            step = int(time_point / (24 * 3600) - oidx)
+            step = int(time_point / (24 * 3600)) - oidx
             # if step == 1:
             #     new_seq[:, nidx] = original_seq[:, oidx]
             #     new_text_list[:, nidx] = original_text_list[:, oidx]
@@ -481,7 +481,7 @@ def recover_text_list(n_users, n_samples, debug=False):
                     while '' in text:
                         text.remove('')
                 text_list.append(text)
-            logger.info('Successfully recover user %d\'s data. ' % uid)
+            logger.info('Successfully recover user %d\'s data with %d samples. ' % (uid, n_samples))
         debug_flag += 1
     # for i in range(10):
     #     print(text_list[i])
@@ -503,13 +503,13 @@ if __name__ == '__main__':
     # First time construct ts data.
     # DG.construct_time_series_data()
 
-    ts_search_result = segment_ts_inner_pro()[1:]
+    ts_search_result = segment_ts_bottom_up()[1:]
     ts_search_result = np.array(ts_search_result)
 
     last_len = -1
     for ts in ts_search_result:
         new_mblog_info = MblogInfo('mblog', '10.21.50.32', 27017, 'user_social', 'Mblog', [],
-                                   '2011-10-01', '2017-09-30', '%Y-%m-%d', (24 * 3600 * ts[0]).tolist())
+                                   '2011-10-01', '2017-09-30', '%Y-%m-%d', (24 * 3600 * np.array(ts[0], np.int)).tolist())
         print(len(ts[0]))
         if last_len == len(ts[0]):
             continue

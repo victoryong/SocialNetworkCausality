@@ -161,3 +161,5 @@ if __name__ == '__main__':
                 else:
                     print(us)
     print(transfer)
+    np.savetxt(conf.get_absolute_path('result') + 'transfer_12.txt', transfer, fmt='%d', delimiter=',')
+

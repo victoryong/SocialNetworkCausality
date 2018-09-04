@@ -40,6 +40,8 @@ def transfer_entropy(sample, max_lag=1, resample_time=100, self_trans=False):
 
     return lag_te
 
+def cond_entropy(x, cond, k=3, base=2):
+    return entropy(np.concatenate((x, cond), 1).tolist(), k, base) - entropy(cond.tolist(), k, base)
 
 def entropy(x, k=3, base=2):
     """ The classic K-L k-nearest neighbor continuous entropy estimator
@@ -153,10 +155,11 @@ def transfer_entropyd(sample, max_lag=1, resample_time=100):
     for i in range(n_nodes):
         for j in range(i, n_nodes):
             if i == j:
+                continue
                 i_p, i_p2, i_f = sample[i, max_lag:-1], sample[i, max_lag+1:], sample[i, :-max_lag-1]
                 te_ii = cmidd(i_f, i_p2, i_p)
 
-                # lag_te[i, j] = te_ii
+                lag_te[i, j] = te_ii
 
                 # te_ii2 = np.array([cmidd(i_f, random.sample(i_p2.tolist(), length), i_p) for m in range(resample_time)])
                 # if len(te_ii2[te_ii2 > te_ii])/100.00 < 0.01:
