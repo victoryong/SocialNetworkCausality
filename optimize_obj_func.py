@@ -55,8 +55,8 @@ def segment_ts_bottom_up(pre_compute=True):
     """
     start_time = datetime.datetime.now()
 
-    seq = original_seq.copy()
-    # seq = original_seq[:, :100].copy()
+    # seq = original_seq.copy()
+    seq = original_seq[:, :100].copy()
     # print(seq)
     results = [['time_steps', 'obj_func', 'h_vars', 'h_tps', 'it', 'regularization']]
     # lamb = -0.01
@@ -125,6 +125,77 @@ def segment_ts_bottom_up(pre_compute=True):
     return results
 
 
+def segment_ts_bottom_up_test(pre_compute=True):
+    start_time = datetime.datetime.now()
+
+    # seq = original_seq.copy()
+    seq = original_seq[:, :100].copy()
+    results = [['time_steps', 'obj_func', 'h_vars', 'h_tps', 'it', 'regularization']]
+    # lamb = -0.01
+    lamb = -100 / seq.shape[1]
+
+    # Initial
+    last_time_steps, last_idx = np.array(range(1, seq.shape[1] + 1)), -1
+    last_obj, last_seq, last_obj_details = mo.object_function(seq, last_time_steps, lamb, True)
+    results.append([last_time_steps, last_obj] + last_obj_details)
+    print('result: ', last_obj)
+    print('details:', last_obj_details)
+    # return
+
+    if pre_compute:
+        mo.pre_compute(seq, last_time_steps)
+
+    levels = []
+    stop_level = 97
+    levels_idx = 0
+
+    max_rst = 0.
+    while True:
+        next_length = last_time_steps.shape[0] - 1
+
+        # Find maximum obj of next level's
+        for i in range(last_idx + 1, next_length):
+            new_time_steps = np.delete(last_time_steps, i)
+            temp_candidate_obj, temp_candidate_seq, temp_candidate_obj_details = \
+                mo.object_function(seq, new_time_steps, lamb, True, i, last_seq)
+
+            if temp_candidate_obj > max_rst:
+                max_rst = temp_candidate_obj
+
+            if next_length > stop_level:
+                levels.append([i, new_time_steps, temp_candidate_obj, temp_candidate_seq, temp_candidate_obj_details, last_seq])
+            results.append([new_time_steps, temp_candidate_obj] + temp_candidate_obj_details)
+
+        results.append([''])
+        if len(levels) <= levels_idx:
+            break
+
+        curr_level = levels[levels_idx]
+        levels_idx += 1
+        last_idx, last_time_steps, last_obj, last_seq, last_obj_details, ll_seq = \
+            curr_level[0], curr_level[1], curr_level[2], curr_level[3], curr_level[4], curr_level[5]
+        # Merge time points i and (i+1) to boost seq's obj result
+        if pre_compute:
+            mo.pre_compute(seq, last_time_steps)
+
+        # break
+    # return
+
+    finish_time = datetime.datetime.now()
+    print('%s用时：%f\n--------' % ('precompute' if pre_compute else 'not-precompute', (finish_time - start_time).total_seconds()))
+    print('最大值: ', max_rst)
+
+    # Save results
+    filename = conf.get_filename_via_tpl(
+        'Obj', n_users=seq.shape[0], n_samples=seq.shape[1], date=datetime.datetime.now().strftime('%y%m%d%H%M%S'))
+    with open(filename, 'w', newline='') as fp:
+        csv_writer = csv.writer(fp)
+        csv_writer.writerow(['lambda: %f' % lamb])
+        csv_writer.writerows(results)
+
+    return results
+
+
 def get_n_samples_list():
     n_samples_list = []
     with open('search_timesteps_results_inner_pro.csv') as fp:
@@ -157,5 +228,6 @@ def get_time_steps_list():
 
 if __name__ == '__main__':
     segment_ts_bottom_up()
-    segment_ts_bottom_up(pre_compute=False)
+    # segment_ts_bottom_up(pre_compute=False)
+    # segment_ts_bottom_up_test()
 
