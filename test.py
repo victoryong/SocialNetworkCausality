@@ -82,6 +82,7 @@ import os
 # original_seq = original_seq.astype(int)
 # print(sum(original_seq[:, :1]))
 # np.savetxt(conf.get_filename_via_tpl('seq', n_users=12, n_samples=2192), original_seq, fmt='%d',delimiter=',')
-a = '1110'
-if '0':
-    print('adfasfadksjl')
+s = 0
+for i in range(2036):
+    s += (2191-i)
+print(s+1)
